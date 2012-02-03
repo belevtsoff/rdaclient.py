@@ -1,20 +1,23 @@
 '''
-@author: Dmytro Bielievtsov
-
 Provides a two-dimensional circular buffer with homogeneous elements
 
-classes:
-    RingBuffer: the buffer
-    datatypes: supported datatypes
-    BufferHeader: header structure
-    BufferError: error definition
+See other classes' docstrings for more information:
+
+* `RingBuffer`: the buffer
+* `datatypes`: supported datatypes
+* `BufferHeader`: header structure
+* `BufferError`: error definition
     
 '''
 
 from multiprocessing import Array
 import ctypes as c
-import numpy as np
 import logging
+
+import numpy as np
+
+__author__ = "Dmytro Bielievtsov"
+__email__ = "belevtsoff@gmail.com"
 
 class RingBuffer(object):
     '''
@@ -28,10 +31,26 @@ class RingBuffer(object):
     so that they all point to the same shared raw array
     (see initialize_from_raw method's docstring).
     
-    Structure:
+    Attributes
+    ----------
+    is_initialized
+    nChannels
+    bufSize
+    pocketSize
+    nptype
+    raw
+    writePtr
     
-    The buffer consists of a buffer interface (self) and the raw sharectypes
-    byte array which has header, data, and pocket subsections (self.raw).
+    See Also
+    --------
+    initialize: allocate new buffer
+    initialize_from_raw: use another buffer's raw array
+    
+    Notes
+    -----
+    The buffer consists of a buffer interface (self) and the raw
+    sharectypes byte array which has header, data, and pocket subsections
+    (self.raw).
     
     1. header section
     Contains the metadata such as size of the sections, current write
@@ -45,18 +64,14 @@ class RingBuffer(object):
     
     3. pocket section
     The pocket section always contains the same data as the leftmost such
-    chunk of the data section. This is done to avoid data copies when reading
-    a data chunk (up to the size of the pocket) first part of which happens
-    to be located at the end of the data section while the second - already
-    in the beginning. This might be useful when reading the data with a 
-    sliding window.
+    chunk of the data section. This is done to avoid data copies when
+    reading a data chunk (up to the size of the pocket) first part of
+    which happens to be located at the end of the data section while the
+    second - already in the beginning. This might be useful when reading
+    the data with a sliding window.
     
     '''
     def __init__(self):
-        '''
-        Creates new buffer interface
-        
-        '''
         self.logger = logging.getLogger('ringbuffer')
         self.__initialized = False
     
@@ -69,12 +84,22 @@ class RingBuffer(object):
     
     def __getattr__(self, name):
         '''
-        __getattr__ overload to avoid accessing buffer attributes before it's
-        initialized 
+        __getattr__ overload to avoid accessing buffer attributes before
+        it's initialized 
         
-        @param name: name of the attribute
+        Parameters
+        ----------      
+        name : string
+            name of the attribute
         
-        @return: attribute, if possible
+        Returns
+        -------
+        requested attribute, if possible
+            
+        Raises
+        ------
+        BufferError
+            If the buffer is not initialized
         
         '''
         init = self.__initialized
@@ -96,32 +121,37 @@ class RingBuffer(object):
     
     # read-only attributes
     writePtr = property(lambda self: self.nSamplesWritten % self.bufSize, None, None,
-                        'the current write pointer position')
+                        'Current write pointer position, read-only (int)')
     is_initialized = property(lambda self: self.__initialized, None, None,
-                        'indicated whether buffer is initialized')
+                        'Indicates whether the buffer is initialized, read-only (bool)')
     raw = property(lambda self: self.__raw, None, None,
-                        'raw buffer array')
+                        'Raw buffer array, read-only (sharedctypes, char)')
     nChannels = property(lambda self: self.__nChannels, None, None,
-                        'dimensionality of a sample')
+                        'Dimensionality of a sample, read-only (int)')
     bufSize = property(lambda self: self.__bufSize, None, None,
-                        'buffer capacity in samples')
+                        'The buffer capacity in samples, read-only (int)')
     pocketSize = property(lambda self: self.__pocketSize, None, None,
-                        'size of the buffer pocket in samples')
+                        'Size of the buffer pocket in samples, read-only (int)')
     nptype = property(lambda self: self.__nptype, None, None,
-                        'the type of the data in the buffer')
+                        'The type of the data in the buffer, read-only (string)')
     
     #------------------------------------------------------------------------------
     
     def initialize(self, nChannels, nSamples, windowSize=1, nptype='float32'):
         '''
-        Initialize the buffer with a new raw array
-         
-        @param nChannels:  dimensionality of a single sample
-        @param nSamples:   the buffer capacity in samples
-        @param windowSize: optional, the size of the window to be used for
-                           reading the data. The pocket of the this size will
-                           be created
-        @param nptype:     the type of the data to be stored
+        Initializes the buffer with a new raw array
+        
+        Parameters
+        ----------
+        nChannels : int
+            dimensionality of a single sample
+        nSamples : int
+            the buffer capacity in samples
+        windowSize : int, optional
+            optional, the size of the window to be used for reading the
+            data. The pocket of the this size will be created
+        nptype : string, optional
+            the type of the data to be stored
                            
         '''
         self.__initialized = True
@@ -154,10 +184,13 @@ class RingBuffer(object):
     
     def initialize_from_raw(self, raw):
         '''
-        Initialize the buffer with the compatible external raw array. All the
-        metadata will be read from the header region of this array.   
+        Initializes the buffer with the compatible external raw array. All
+        the metadata will be read from the header region of this array.   
         
-        @param raw: the raw array to initialize with
+        Parameters
+        ----------
+        raw : sharedctypes char array
+            the raw array to initialize with
                            
         '''
         self.__initialized = True
@@ -188,16 +221,29 @@ class RingBuffer(object):
     
     def __get_local_idx(self, startIdx, endIdx, nocheck=False):
         '''
-        Checks for availability of requested chuck and returns local indices
-        if the requested chunk is non-contiguous, uses a pocket, if the
-        pocket is too small uses slow (copy) mode and issues a corresponding
-        warning
+        Checks for availability of requested chuck and returns local
+        indices if the requested chunk is non-contiguous, uses a pocket,
+        if the pocket is too small uses slow (copy) mode and issues a
+        corresponding warning
         
-        @param startIdx: chunk start index (in samples)
-        @param endIdx:   chunk end index (in samples)
-        @param nocheck:  whether to check availability
+        Parameters
+        ----------
+        startIdx : int
+            chunk start index (in samples)
+        endIdx : int
+            chunk end index (in samples)
+        nocheck : bool, optional
+            whether to check availability
         
-        @return: slice tuple or list of indices depending on the mode 
+        Returns
+        -------
+        idx: slice tuple or list of indices depending on the mode
+        
+        Raises
+        ------
+        BufferError
+            If requested samples are not available and `nocheck` is set to
+            True
         
         '''
         
@@ -234,8 +280,12 @@ class RingBuffer(object):
         '''
         Writes data to buffer.
         
-        @param data: properly shaped numpy array
-        @param idx: local indices, returned by the __get_local_idx method
+        Parameters
+        ----------
+        data : ndarray
+            properly shaped numpy array
+        idx : tuple or list
+            local indices, returned by the __get_local_idx method
         
         '''
         # if the slicing (contiguous chunk)
@@ -262,9 +312,15 @@ class RingBuffer(object):
         '''
         Reads the data from buffer
         
-        @param idx: local indices, returned by the __get_local_idx method
+        Parameters
+        ----------        
+        idx : tuple or list
+            local indices, returned by the __get_local_idx method
         
-        @return: numpy view on the requested chunk
+        Returns
+        -------
+        numpy view on the requested chunk (ndarray)
+            
         '''
         if len(idx) == 2 and (idx[1] - idx[0]) > 0:
             i, j = idx
@@ -276,14 +332,25 @@ class RingBuffer(object):
         '''
         Checks whether the requested data samples are available.
         
-        @param sampleStart: first sample index (included)
-        @param sampleEnd: last samples index (excluded)
+        Parameters
+        ----------        
+        sampleStart : int
+            first sample index (included)
+        sampleEnd : int
+            last samples index (excluded)
         
-        @return: 0 if the data is available
-                 2 if (part of) the data is already overwritten
-                 3 if (part of) the data is not yet in the buffer
+        Returns
+        -------        
+        0
+            if the data is available
+        2
+            if (part of) the data is already overwritten
+        3
+            if (part of) the data is not yet in the buffer
                  
         '''
+        if sampleStart < 0 or sampleEnd <= 0:
+            return 5
         if sampleEnd > self.nSamplesWritten:
             return 3 # data is not ready
         if (self.nSamplesWritten - sampleStart) > self.bufSize:
@@ -293,15 +360,27 @@ class RingBuffer(object):
     
     def get_data(self, sampleStart, sampleEnd, wprotect=True):
         '''
-        Gets the data from the buffer. If possible, the data is returned in
-        the form of a numpy view on the corresponding chunk (without copy).
-        If the data is not available, rises an exception
-         
-        @param sampleStart: first sample index (included)
-        @param sampleEnd:   last samples index (excluded)
-        @param wprotect:    protect returned views from occasional writes
+        Gets the data from the buffer. If possible, the data is returned
+        in the form of a numpy view on the corresponding chunk (without
+        copy). If the data is not available, rises an exception
         
-        @return: data chunk (numpy view or numpy array)
+        Parameters
+        ----------
+        sampleStart : int
+            first sample index (included)
+        sampleEnd : int
+            last samples index (excluded)
+        wprotect : bool, optional
+            protect returned views from occasional writes
+        
+        Returns
+        -------        
+        data : data chunk (numpy view or numpy array)
+        
+        Raises
+        ------
+        BufferError
+            If the data is not available
         
         '''
         idx = self.__get_local_idx(sampleStart, sampleEnd)
@@ -313,7 +392,10 @@ class RingBuffer(object):
         '''
         Pushes the data to the buffer
         
-        @param data: properly shaped numpy array
+        Parameters
+        ----------       
+        data : ndarray
+            properly shaped numpy array
         
         '''
         datashape = data.shape
@@ -347,7 +429,10 @@ class datatypes():
         '''
         Gets buffer typecode given numpy datatype
         
-        @param type: numpy datatype, string (e.g. 'float32')
+        Parameters
+        ----------        
+        type : string
+            numpy datatype (e.g. 'float32')
         
         '''
         idx = cls.types.values().index(type)
@@ -357,7 +442,10 @@ class datatypes():
         '''
         Gets numpy datatype given a buffer typecode
         
-        @param code: typecode, integer (e.g. 0)
+        Parameters
+        ----------            
+        code : int
+            typecode (e.g. 0)
         
         '''
         return cls.types[code]
@@ -367,6 +455,18 @@ class BufferHeader(c.Structure):
     '''
     A ctypes structure describing the buffer header 
     
+    Attributes
+    ----------
+    bufSizeBytes : c_ulong
+        size of the buffer in bytes, excluding header and pocket
+    pocketSizeBytes : c_ulong
+        size of the buffer in bytes
+    dataType : c_uint
+        typecode of the data stored in the buffer
+    nChannels : c_ulong
+        sample dimensionality
+    nSamplesWritten : c_ulong
+        the total number of sample, written after the buffer allocation
     '''
     _pack_ = 1
     _fields_ = [
@@ -386,7 +486,10 @@ class BufferError(Exception):
         '''
         Initializes a BufferError with given error code
         
-        @param code: error code
+        Parameters
+        ----------
+        code : int
+            error code
         
         '''
         self.code = code
@@ -401,6 +504,8 @@ class BufferError(Exception):
             return 'unable to get indices (error %s)' % repr(self.code)
         elif self.code == 4:
             return 'writing incompatible data (error %s)' % repr(self.code)
+        elif self.code == 5:
+            return 'negative index (error %s)' % repr(self.code)
         else:
             return '(error %s)' % repr(self.code)
 
