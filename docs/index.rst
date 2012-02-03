@@ -14,7 +14,6 @@ Contents:
    intro
    details
    tutorial
-   examples
 
 API documentation:
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # rdaclient.py documentation build configuration file, created by
-# sphinx-quickstart on Mon Jan 30 13:45:09 2012.
+# sphinx-quickstart on Fri Feb  3 14:38:45 2012.
 #
 # This file is execfile()d with the current directory set to its containing dir.
 #
@@ -16,7 +16,7 @@ import sys, os
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath('../src'))
+#sys.path.insert(0, os.path.abspath('.'))
 
 # -- General configuration -----------------------------------------------------
 
@@ -25,7 +25,7 @@ sys.path.insert(0, os.path.abspath('../src'))
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.todo']
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 'sphinx.ext.viewcode', 'numpydoc', 'sphinx.ext.autosummary']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -169,16 +169,21 @@ htmlhelp_basename = 'rdaclientpydoc'
 
 # -- Options for LaTeX output --------------------------------------------------
 
-# The paper size ('letter' or 'a4').
-#latex_paper_size = 'letter'
+latex_elements = {
+# The paper size ('letterpaper' or 'a4paper').
+#'papersize': 'letterpaper',
 
 # The font size ('10pt', '11pt' or '12pt').
-#latex_font_size = '10pt'
+#'pointsize': '10pt',
+
+# Additional stuff for the LaTeX preamble.
+#'preamble': '',
+}
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'rdaclientpy.tex', u'rdaclient.py Documentation',
+  ('in', 'rdaclientpy.tex', u'rdaclient.py Documentation',
    u'Dmytro Bielievtsov', 'manual'),
 ]
 
@@ -196,9 +201,6 @@ latex_documents = [
 # If true, show URL addresses after external links.
 #latex_show_urls = False
 
-# Additional stuff for the LaTeX preamble.
-#latex_preamble = ''
-
 # Documents to append as an appendix to all manuals.
 #latex_appendices = []
 
@@ -211,6 +213,34 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'rdaclientpy', u'rdaclient.py Documentation',
+    ('in', 'rdaclientpy', u'rdaclient.py Documentation',
      [u'Dmytro Bielievtsov'], 1)
 ]
+
+# If true, show URL addresses after external links.
+#man_show_urls = False
+
+
+# -- Options for Texinfo output ------------------------------------------------
+
+# Grouping the document tree into Texinfo files. List of tuples
+# (source start file, target name, title, author,
+#  dir menu entry, description, category)
+texinfo_documents = [
+  ('in', 'rdaclientpy', u'rdaclient.py Documentation',
+   u'Dmytro Bielievtsov', 'rdaclientpy', 'One line description of project.',
+   'Miscellaneous'),
+]
+
+# Documents to append as an appendix to all manuals.
+#texinfo_appendices = []
+
+# If false, no module index is generated.
+#texinfo_domain_indices = True
+
+# How to display URL addresses: 'footnote', 'no', or 'inline'.
+#texinfo_show_urls = 'footnote'
+
+
+# Example configuration for intersphinx: refer to the Python standard library.
+intersphinx_mapping = {'http://docs.python.org/': None}

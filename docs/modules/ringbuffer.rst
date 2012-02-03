@@ -2,7 +2,6 @@ Ring Buffer (:mod:`ringbuffer`)
 ==========================================
 
 .. automodule:: ringbuffer
-   :members: 
+   :members: RingBuffer, BufferHeader, BufferError, datatypes
    :undoc-members:
-   :show-inheritance:
    
