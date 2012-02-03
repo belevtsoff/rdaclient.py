@@ -1,23 +1,32 @@
 '''
-@author: Dmytro Bielievtsov
-
 Some useful tools to work with BrainVision RDA (Remote Data Access) API
 
 '''
 
-import rdadefs as rda
 from ctypes import *
+
 import numpy as np
+
+import rdadefs as rda
+
+__author__ = "Dmytro Bielievtsov"
+__email__ = "belevtsoff@gmail.com"
 
 def rda_read_start_msg(s, hdr):
     '''
     Reads an RDA start message from socket given the header
     
-    @param s:   socket object
-    @param hdr: message header (rda_msg_hdr_t)
+    Parameters
+    ----------
+    s : socket
+        socket object
+    hdr : rda_msg_hdr_t
+        message header
     
-    @return: complete start message including variable fields 
-             (rda_msg_start_full_t)
+    Returns
+    -------
+    mgs : rda_msg_start_full_t
+        complete start message including variable fields
     
     '''
     # allocate space for the whole message
@@ -56,12 +65,19 @@ def rda_read_data_msg(s, hdr, nChannels):
     '''
     Reads an RDA data message from socket given the header
     
-    @param s:         socket object
-    @param hdr:       message header (rda_msg_hdr_t)
-    @param nChannels: number of channels (from start message)
+    Parameters
+    ----------
+    s : socket
+        socket object
+    hdr : rda_msg_hdr_t
+        message header
+    nChannels : int
+        number of channels (from start message)
     
-    @return: complete data message including variable fields 
-             (rda_msg_data_full_t)
+    Returns
+    -------
+    msg : rda_msg_data_full_t
+        complete data message including variable fields 
     
     '''
     # allocate space for the whole message
@@ -98,11 +114,16 @@ def rda_read_data_msg(s, hdr, nChannels):
 
 def startmsg2string(msg):
     '''
-    Converts an RDA start message (rda_msg_data_full_t) to string
+    Converts an RDA start message (rda_msg_start_full_t) to string
     
-    @param msg: RDA start message (rda_msg_data_full_t)
+    Parameters
+    ----------
+    msg : rda_msg_start_full_t:
+        RDA start message
     
-    @return: string
+    Returns
+    -------    
+    string
     
     '''
     string = '%d channels: \n' % msg.nChannels
@@ -118,33 +139,49 @@ def ubyte2string(array):
     '''
     Converts a ctypes ubyte array to string
     
-    @param array: array
+    Parameters
+    array : ctypes byte array
+        input array
     
-    @return: string
+    Returns
+    -------
+    string
     
     '''
     return ''.join([chr(b) for b in array])
 
 def check_received(n, msg):
     '''
-    Checks whether the message is completely received. If OK, return nothing,
-    else, raises an exception
+    Checks whether the message is completely received. If OK, return
+    nothing, else, raises an exception
     
-    @param n:   number of bytes received (returned by socket.recv_int())
-    @param msg: message received (any ctypes structure)
+    Parameters
+    ----------
+    n : int
+        number of bytes received (returned by socket.recv_int())
+    msg : ctypes structure
+        message received
     
     '''
     if (n != sizeof(msg)):
-        raise Exception('Failed to receive packet')
+        raise Exception('Failed to receive packet, received %s bytes,' + 
+                        'should be %s bytes'
+                        % (n, sizeof(msg)))
     else: pass
     
 def validate_rda_guid(hdr):
     '''
     Checks whether the signature of the message is valid, given its header
     
-    @param hdr: message header (rda_msg_hdr_t)
+    Parameters
+    ----------
+    hdr : rda_msg_hdr_t
+        message header
     
-    @return: verification result (boolean)
+    Returns
+    -------
+    result : bool
+        verification result
     
     '''
     for b1, b2 in zip(hdr.guid, rda.RDA_GUID):
