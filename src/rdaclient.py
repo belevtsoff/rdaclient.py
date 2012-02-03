@@ -1,23 +1,23 @@
 '''
-@author: Dmytro Bielievtsov
-
-An asynchronous RDA (Remote Data Access) client with buffer. The RDA data
-sharing is used by the BrainVision software.
-
+RDA client classes. See rdaclient.Client's docstring for more information
 '''
 
 from multiprocessing import Process, Queue
 from collections import deque
-
+import signal
 import ctypes as c
-import numpy as np
 import socket
 import logging
 import time
 
+import numpy as np
+
 import rdadefs
 import rdatools
 import ringbuffer
+
+__author__ = "Dmytro Bielievtsov"
+__email__ = "belevtsoff@gmail.com"
 
 class Client(object):
     '''
@@ -25,22 +25,37 @@ class Client(object):
     child process for storing constantly incoming data in the background.
     
     Currently supports only float32 data type
+    
+    Parameters
+    ----------
+    buffer_size : int, optional
+        buffer capacity (in samples)
+    buffer_window : int, optional
+        buffer pocket size (in samples)
+        
+    Attributes
+    ----------
+    is_streaming
+    buffer_size
+    data_dtype
+    buffer_window
+    start_msg : None or rda_msg_start_full_t
+        a start message obtained from the server after the first
+        start_streaming() call.
+        
+    Notes
+    -----
+    The RDA data sharing is used by the BrainVision software.
+    
     '''
     def __init__(self, buffer_size=300000, buffer_window=1):
-        '''
-        Creates a client with initial setup.
-                
-        @param buffer_size: buffer capacity in samples
-        @param buffer_window: buffer pocket size in samples
-        
-        '''
         self.logger = logging.getLogger('rdaclient')
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         
         self.__buf = ringbuffer.RingBuffer()
-        self.buffer_size = buffer_size
-        self.data_dtype = 'float32' # for now
-        self.buffer_window = buffer_window
+        self.__buffer_size = buffer_size
+        self.__data_dtype = 'float32' # for now
+        self.__buffer_window = buffer_window
         
         self.__streamer = None
         self.q = Queue()
@@ -53,13 +68,25 @@ class Client(object):
         except:
             return False
     is_streaming = property(__get_is_streaming, None, None,
-                            'Checks whether the Streamer is active')
+                            'Checks whether the Streamer is active, read-only (bool)')
+    buffer_size = property(lambda self: self.__buffer_size, None, None,
+                            'Buffer capacity in samples, read-only (int)')
+    data_dtype = property(lambda self: self.__data_dtype, None, None,
+                            'Buffer\'s data type, read-only (string)')
+    buffer_window = property(lambda self: self.__buffer_window, None, None,
+                            'Buffer pocket size, read-only (in samples)')
+    last_sample = property(lambda self: self.__buf.nSamplesWritten, None, None,
+                            'Number of a last sample written to the buffer\
+                            (= total no.)')
     
     def connect(self, destaddr):
         '''
-        Connect to an RDA server
+        Connects to an RDA server
         
-        @param destaddr: server address
+        Parameters
+        ----------        
+        destaddr : tuple
+            server address
         
         '''
         self.sock.connect(destaddr)
@@ -74,14 +101,17 @@ class Client(object):
         3. Spawns a background process for data streaming
         4. Releases
         
-        @param timeout: time to wait for a start message (in seconds)
+        Parameters
+        ----------
+        timeout : float, optional
+            time to wait for a start message (in seconds)
         
         '''
         
         if self.is_streaming:
             raise Exception('already streaming')
         
-        self.logger.info('waiting rda start message...')
+        self.logger.info('waiting for an rda start message...')
         
         hdr = rdadefs.rda_msg_hdr_t()
         
@@ -124,10 +154,13 @@ class Client(object):
     
     def stop_streaming(self, write_timelog=False):
         '''
-        Stops streaming by sending corresponding signal to Streamer process
+        Stops streaming by sending corresponding signal to a Streamer process
         
-        @param write_timelog: If True, streamer will write its timelog to a
-                              file before stopping
+        Parameters
+        ----------
+        write_timelog : bool, optional
+            If True, streamer will write its timelog to a file before
+            stopping
         
         '''
         if not self.is_streaming:
@@ -152,12 +185,18 @@ class Client(object):
         '''
         Gets the data from the buffer. If possible, the data is returned in
         the form of a numpy view on the corresponding chunk (without copy)
-         
-        @param sampleStart: first sample index (included)
-        @param sampleEnd:   last samples index (excluded)
         
-        @return: data chunk (numpy view or numpy array) or None,
-                 if the data is not available
+        Parameters
+        ----------
+        sampleStart : int
+            first sample index (included)
+        sampleEnd : int
+            last samples index (excluded)
+        
+        Returns
+        -------
+        data : ndarray (view or copy) or None
+            data chunk or None, if the data is not available
 
         '''
         try:
@@ -165,33 +204,38 @@ class Client(object):
         except:
             return None
     
-    def get_last_sample(self):
-        '''
-        Gets the number of a last sample written to the buffer (= total no.)
-        
-        @return: sample number, integer
-        
-        '''
-        return self.__buf.nSamplesWritten
-    
-    def wait(self, sampleStart, sampleEnd, timeout=1, sleep=0.0005):
+    def wait(self, sampleStart, sampleEnd, timeout=1, sleep=5e-4):
         '''
         Gets the data from the buffer. Blocks if data is not available and
         releases if one of the following is true:
+        
         1. data is available
         2. timeout is over
         3. data is overwritten
         
-        @param sampleStart: first sample index (included)
-        @param sampleEnd:   last samples index (excluded)
-        @param timeout:     timeout (seconds)
-        @param sleep:       time to wait until the next loop iteration. Used
-                            to avoid 100% processor loading.
+        Parameters
+        ----------
+        sampleStart : int
+            first sample index (included)
+        sampleEnd : int
+            last samples index (excluded)
+        timeout : float, optional
+            timeout (seconds)
+        sleep : float, optional
+            time to wait until the next loop iteration. Used to avoid
+            100% processor loading.
                             
-        @return: data chunk (numpy view or numpy array) or None, if the data
-                 is overwritten or timeout is over
+        Returns
+        -------
+        data : ndarray (view or copy) or None
+            data chunk or None, if the data is overwritten or the timeout
+            has expired
                  
         '''
+        
+        if not self.is_streaming:
+            raise Exception('nothing to wait, start streaming first')
+        
         then = time.time()
         now = time.time()
         
@@ -207,44 +251,59 @@ class Client(object):
             
         return None
     
-    def poll(self, nSamples, timeout=1, sleep=0.0005):
+    def poll(self, nSamples, timeout=10, sleep=0.0005):
         '''
         Gets the most resent data chunk from the buffer. Blocks until the
         next data block is written to the buffer or timeout is over.
         
-        @param nSamples: chunk size (in samples)
-        @param timeout:  timeout (seconds)
-        @param sleep:    time to wait until the next loop iteration. Used
-                         to avoid 100% processor loading.
+        Parameters
+        ----------
+        nSamples : int
+            chunk size (in samples)
+        timeout : float
+            timeout (seconds)
+        sleep : float
+            time to wait until the next loop iteration. Used to avoid
+            100% processor loading.
                          
-        @return: data chunk (numpy view or numpy array) or None, if the data
-                 is overwritten or timeout is over  
+        Returns
+        -------
+        data : ndarray (view or copy) or None
+            data chunk or None, if the data is overwritten or the timeout
+            has expired
                  
         '''
-        ls = self.get_last_sample()
-        if self.wait(ls, ls + 1, timeout, sleep) is not None:
-            ls = self.get_last_sample()
-            return self.get_data(ls - nSamples, ls)
-        else: return None
         
+        if not self.is_streaming:
+            raise Exception('nothing to wait, start streaming first')
+        
+        ls = self.last_sample
+        if self.wait(ls, ls + 1, timeout, sleep) is not None:
+            ls = self.last_sample
+            return self.get_data(ls - nSamples, ls)
+        
+        return None
+
+#------------------------------------------------------------------------------ 
     
 class Streamer(Process):
     '''
-    A Streamer class. Inherited from the multiprocessing.Process. It is
+    A Streamer class. Inherited from the `multiprocessing.Process`. It is
     spawned by a Client to work in the background and receive the data.
-     
+    
+    The buffer interface is initialized with a provided raw sharedctypes
+    buffer array.
+    
+    Parameters
+    ----------
+    q : Queue
+        Queue object for interprocess communication
+    fd : int
+        socket file descriptor (the one which is connected to a server)
+    raw : sharectypes char array:
+        a raw sharedctypes buffer array.
     '''
     def __init__(self, q, fd, raw):
-        '''
-        Streamer with initial setup. The buffer interface is initialized
-        with a provided raw sharedctypes buffer array.
-        
-        @param q:   Queue object for interprocess communication
-        @param fd:  socket file descriptor (the one which is connected to a 
-                    server)
-        @param raw: a raw sharedctypes buffer array
-        
-        '''
         self.logger = logging.getLogger('data_streamer')
         self.sock = socket.fromfd(fd, socket.AF_INET, socket.SOCK_STREAM)
         self.__buf = ringbuffer.RingBuffer()
@@ -268,6 +327,12 @@ class Streamer(Process):
         hdr = rdadefs.rda_msg_hdr_t()
         
         self.logger.info('started streaming')
+        
+        # Ignore Ctrl+C. The process is run in the daemonic mode, so if the
+        # Client terminates, the streamer will be terminated anyway. This
+        # ignoring however, allows for custom Ctrl+C handling in the
+        # Client process to gracefully stop both the Client and the Streamer
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         
         # stream until there's a stop command
         while cmd != 'stop':
@@ -308,7 +373,10 @@ class Streamer(Process):
         '''
         Reshapes the data chunk and pushes it to the buffer
          
-        @param msg: rda_msg_data_t data message
+        Parameters
+        ----------            
+        msg : rda_msg_data_t
+            data message
         
         '''
         data = np.frombuffer(msg.fData, 'float32')
@@ -322,7 +390,9 @@ class Streamer(Process):
         '''
         Gets the command from the queue
         
-        @return: command or None, if there was no command
+        Returns
+        -------        
+        cmd : string or None, if there was no command
         
         '''
         try:
@@ -335,7 +405,10 @@ class Streamer(Process):
         '''
         Executes the command, if it's known
         
-        @param cmd: command
+        Parameters
+        ----------
+        cmd : string
+            command
         
         '''
         if self.cmds.has_key(cmd):
@@ -353,8 +426,10 @@ class Streamer(Process):
         np.save(self.timelog_fname, np.array(self.timelog))
 
 
+#------------------------------------------------------------------------------ 
+
 logging.basicConfig(level=logging.INFO, format='[%(process)-5d:%(threadName)-10s] %(name)s: %(levelname)s: %(message)s')
-    
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     client = Client(buffer_size=300000, buffer_window=10)
