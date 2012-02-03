@@ -1,0 +1,261 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>RDA tools (rdatools) &mdash; rdaclient.py 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="rdaclient.py 0.1 documentation" href="../index.html" />
+    <link rel="next" title="RDA definitions (rdadefs)" href="rdadefs.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="rdadefs.html" title="RDA definitions (rdadefs)"
+             accesskey="N">next</a> |</li>
+        <li><a href="../index.html">rdaclient.py 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-rdatools">
+<span id="rda-tools-rdatools"></span><h1>RDA tools (<a class="reference internal" href="#module-rdatools" title="rdatools"><tt class="xref py py-mod docutils literal"><span class="pre">rdatools</span></tt></a>)<a class="headerlink" href="#module-rdatools" title="Permalink to this headline">¶</a></h1>
+<p>Some useful tools to work with BrainVision RDA (Remote Data Access) API</p>
+<dl class="function">
+<dt id="rdatools.check_received">
+<tt class="descclassname">rdatools.</tt><tt class="descname">check_received</tt><big>(</big><em>n</em>, <em>msg</em><big>)</big><a class="reference internal" href="../_modules/rdatools.html#check_received"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rdatools.check_received" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks whether the message is completely received. If OK, return
+nothing, else, raises an exception</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>n</strong> : int</p>
+<blockquote>
+<div><p>number of bytes received (returned by socket.recv_int())</p>
+</div></blockquote>
+<p><strong>msg</strong> : ctypes structure</p>
+<blockquote class="last">
+<div><p>message received</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="rdatools.rda_read_data_msg">
+<tt class="descclassname">rdatools.</tt><tt class="descname">rda_read_data_msg</tt><big>(</big><em>s</em>, <em>hdr</em>, <em>nChannels</em><big>)</big><a class="reference internal" href="../_modules/rdatools.html#rda_read_data_msg"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rdatools.rda_read_data_msg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads an RDA data message from socket given the header</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>s</strong> : socket</p>
+<blockquote>
+<div><p>socket object</p>
+</div></blockquote>
+<p><strong>hdr</strong> : rda_msg_hdr_t</p>
+<blockquote>
+<div><p>message header</p>
+</div></blockquote>
+<p><strong>nChannels</strong> : int</p>
+<blockquote>
+<div><p>number of channels (from start message)</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>msg</strong> : rda_msg_data_full_t</p>
+<blockquote class="last">
+<div><p>complete data message including variable fields</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="rdatools.rda_read_start_msg">
+<tt class="descclassname">rdatools.</tt><tt class="descname">rda_read_start_msg</tt><big>(</big><em>s</em>, <em>hdr</em><big>)</big><a class="reference internal" href="../_modules/rdatools.html#rda_read_start_msg"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rdatools.rda_read_start_msg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads an RDA start message from socket given the header</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>s</strong> : socket</p>
+<blockquote>
+<div><p>socket object</p>
+</div></blockquote>
+<p><strong>hdr</strong> : rda_msg_hdr_t</p>
+<blockquote>
+<div><p>message header</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>mgs</strong> : rda_msg_start_full_t</p>
+<blockquote class="last">
+<div><p>complete start message including variable fields</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="rdatools.startmsg2string">
+<tt class="descclassname">rdatools.</tt><tt class="descname">startmsg2string</tt><big>(</big><em>msg</em><big>)</big><a class="reference internal" href="../_modules/rdatools.html#startmsg2string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rdatools.startmsg2string" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts an RDA start message (rda_msg_start_full_t) to string</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>msg</strong> : rda_msg_start_full_t:</p>
+<blockquote>
+<div><p>RDA start message</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first last"><strong>string</strong> :</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="rdatools.ubyte2string">
+<tt class="descclassname">rdatools.</tt><tt class="descname">ubyte2string</tt><big>(</big><em>array</em><big>)</big><a class="reference internal" href="../_modules/rdatools.html#ubyte2string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rdatools.ubyte2string" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts a ctypes ubyte array to string</p>
+<p>Parameters
+array : ctypes byte array</p>
+<blockquote>
+<div>input array</div></blockquote>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns :</th><td class="field-body"><strong>string</strong> :</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="rdatools.validate_rda_guid">
+<tt class="descclassname">rdatools.</tt><tt class="descname">validate_rda_guid</tt><big>(</big><em>hdr</em><big>)</big><a class="reference internal" href="../_modules/rdatools.html#validate_rda_guid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rdatools.validate_rda_guid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks whether the signature of the message is valid, given its header</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>hdr</strong> : rda_msg_hdr_t</p>
+<blockquote>
+<div><p>message header</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>result</strong> : bool</p>
+<blockquote class="last">
+<div><p>verification result</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Next topic</h4>
+  <p class="topless"><a href="rdadefs.html"
+                        title="next chapter">RDA definitions (<tt class="docutils literal docutils literal"><span class="pre">rdadefs</span></tt>)</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/modules/rdatools.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="rdadefs.html" title="RDA definitions (rdadefs)"
+             >next</a> |</li>
+        <li><a href="../index.html">rdaclient.py 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Dmytro Bielievtsov.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+  </body>
+</html>

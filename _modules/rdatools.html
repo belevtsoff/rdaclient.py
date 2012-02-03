@@ -1,0 +1,289 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>rdatools &mdash; rdaclient.py 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="rdaclient.py 0.1 documentation" href="../index.html" />
+    <link rel="up" title="Module code" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">rdaclient.py 0.1 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for rdatools</h1><div class="highlight"><pre>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">Some useful tools to work with BrainVision RDA (Remote Data Access) API</span>
+
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">from</span> <span class="nn">ctypes</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+<span class="kn">import</span> <span class="nn">rdadefs</span> <span class="kn">as</span> <span class="nn">rda</span>
+
+<span class="n">__author__</span> <span class="o">=</span> <span class="s">&quot;Dmytro Bielievtsov&quot;</span>
+<span class="n">__email__</span> <span class="o">=</span> <span class="s">&quot;belevtsoff@gmail.com&quot;</span>
+
+<div class="viewcode-block" id="rda_read_start_msg"><a class="viewcode-back" href="../modules/rdatools.html#rdatools.rda_read_start_msg">[docs]</a><span class="k">def</span> <span class="nf">rda_read_start_msg</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">hdr</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Reads an RDA start message from socket given the header</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    s : socket</span>
+<span class="sd">        socket object</span>
+<span class="sd">    hdr : rda_msg_hdr_t</span>
+<span class="sd">        message header</span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    mgs : rda_msg_start_full_t</span>
+<span class="sd">        complete start message including variable fields</span>
+<span class="sd">    </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="c"># allocate space for the whole message</span>
+    <span class="n">buf</span> <span class="o">=</span> <span class="p">(</span><span class="n">c_char</span> <span class="o">*</span> <span class="n">hdr</span><span class="o">.</span><span class="n">nSize</span><span class="p">)()</span>
+    
+    <span class="c"># create a view on the required part, no copies</span>
+    <span class="n">msg_fixed</span> <span class="o">=</span> <span class="n">rda</span><span class="o">.</span><span class="n">rda_msg_start_t</span><span class="o">.</span><span class="n">from_buffer</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span>
+    <span class="n">msg_fixed</span><span class="o">.</span><span class="n">hdr</span> <span class="o">=</span> <span class="n">hdr</span>
+    
+    <span class="c"># another view, cuz there&#39;s no offset argument in rect_into()</span>
+    <span class="n">rest</span> <span class="o">=</span> <span class="p">(</span><span class="n">c_char</span> <span class="o">*</span> <span class="p">(</span><span class="n">sizeof</span><span class="p">(</span><span class="n">msg_fixed</span><span class="p">)</span> <span class="o">-</span> <span class="n">sizeof</span><span class="p">(</span><span class="n">hdr</span><span class="p">)))</span>\
+            <span class="o">.</span><span class="n">from_buffer</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">sizeof</span><span class="p">(</span><span class="n">hdr</span><span class="p">))</span>
+    
+    <span class="n">n</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">recv_into</span><span class="p">(</span><span class="n">rest</span><span class="p">)</span>
+    <span class="n">check_received</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">rest</span><span class="p">)</span>
+    
+    <span class="n">nChannels</span> <span class="o">=</span> <span class="n">msg_fixed</span><span class="o">.</span><span class="n">nChannels</span>
+    <span class="n">stringLength</span> <span class="o">=</span> <span class="n">sizeof</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span> <span class="o">-</span> <span class="n">sizeof</span><span class="p">(</span><span class="n">msg_fixed</span><span class="p">)</span> <span class="o">-</span> <span class="n">nChannels</span> <span class="o">*</span> <span class="n">sizeof</span><span class="p">(</span><span class="n">c_double</span><span class="p">)</span>
+    
+    <span class="c"># create new type including variable fields</span>
+    <span class="n">rda_msg_start_full_t</span> <span class="o">=</span> <span class="n">rda</span><span class="o">.</span><span class="n">rda_msg_start_t</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">nChannels</span><span class="p">,</span> <span class="n">stringLength</span><span class="p">)</span>
+    
+    <span class="c"># receive the rest</span>
+    <span class="c"># this may be a large block, so the receive command may release</span>
+    <span class="c"># before if received all the data. Using loop here until all</span>
+    <span class="c"># the data is received</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">while</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="n">rda_msg_start_full_t</span><span class="o">.</span><span class="n">varLength</span><span class="p">:</span>
+        <span class="n">msg_var</span> <span class="o">=</span> <span class="p">(</span><span class="n">c_char</span> <span class="o">*</span> <span class="p">(</span><span class="n">rda_msg_start_full_t</span><span class="o">.</span><span class="n">varLength</span> <span class="o">-</span> <span class="n">n</span><span class="p">))</span> \
+                          <span class="o">.</span><span class="n">from_buffer</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">sizeof</span><span class="p">(</span><span class="n">msg_fixed</span><span class="p">)</span> <span class="o">+</span> <span class="n">n</span><span class="p">)</span>
+        <span class="n">n</span> <span class="o">+=</span> <span class="n">s</span><span class="o">.</span><span class="n">recv_into</span><span class="p">(</span><span class="n">msg_var</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">rda_msg_start_full_t</span><span class="o">.</span><span class="n">from_buffer</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="rda_read_data_msg"><a class="viewcode-back" href="../modules/rdatools.html#rdatools.rda_read_data_msg">[docs]</a><span class="k">def</span> <span class="nf">rda_read_data_msg</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">hdr</span><span class="p">,</span> <span class="n">nChannels</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Reads an RDA data message from socket given the header</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    s : socket</span>
+<span class="sd">        socket object</span>
+<span class="sd">    hdr : rda_msg_hdr_t</span>
+<span class="sd">        message header</span>
+<span class="sd">    nChannels : int</span>
+<span class="sd">        number of channels (from start message)</span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    msg : rda_msg_data_full_t</span>
+<span class="sd">        complete data message including variable fields </span>
+<span class="sd">    </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="c"># allocate space for the whole message</span>
+    <span class="n">buf</span> <span class="o">=</span> <span class="p">(</span><span class="n">c_char</span> <span class="o">*</span> <span class="n">hdr</span><span class="o">.</span><span class="n">nSize</span><span class="p">)()</span>
+
+    <span class="c"># create a view on the required part, no copies</span>
+    <span class="n">msg_fixed</span> <span class="o">=</span> <span class="n">rda</span><span class="o">.</span><span class="n">rda_msg_data_t</span><span class="o">.</span><span class="n">from_buffer</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span>
+    <span class="n">msg_fixed</span><span class="o">.</span><span class="n">hdr</span> <span class="o">=</span> <span class="n">hdr</span>
+    
+    <span class="c"># another view, cuz there&#39;s no offset argument in rect_into()</span>
+    <span class="n">rest</span> <span class="o">=</span> <span class="p">(</span><span class="n">c_char</span> <span class="o">*</span> <span class="p">(</span><span class="n">sizeof</span><span class="p">(</span><span class="n">msg_fixed</span><span class="p">)</span> <span class="o">-</span> <span class="n">sizeof</span><span class="p">(</span><span class="n">hdr</span><span class="p">)))</span>\
+            <span class="o">.</span><span class="n">from_buffer</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">sizeof</span><span class="p">(</span><span class="n">hdr</span><span class="p">))</span>
+            
+    <span class="n">n</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">recv_into</span><span class="p">(</span><span class="n">rest</span><span class="p">)</span>
+    <span class="n">check_received</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">rest</span><span class="p">)</span>
+    
+    <span class="n">nPoints</span> <span class="o">=</span> <span class="n">msg_fixed</span><span class="o">.</span><span class="n">nPoints</span>
+    <span class="n">markersLength</span> <span class="o">=</span> <span class="n">sizeof</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span> <span class="o">-</span> <span class="n">sizeof</span><span class="p">(</span><span class="n">msg_fixed</span><span class="p">)</span> <span class="o">-</span> <span class="n">nChannels</span> <span class="o">*</span> <span class="n">nPoints</span> <span class="o">*</span> <span class="n">sizeof</span><span class="p">(</span><span class="n">c_float</span><span class="p">)</span>
+    
+    <span class="c"># create new type including variable fields</span>
+    <span class="n">rda_msg_data_full_t</span> <span class="o">=</span> <span class="n">rda</span><span class="o">.</span><span class="n">rda_msg_data_t</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="n">nChannels</span><span class="p">,</span> <span class="n">nPoints</span><span class="p">,</span> <span class="n">markersLength</span><span class="p">)</span>
+    
+    <span class="c"># receive the rest</span>
+    <span class="c"># this may be a large block, so the receive command may release</span>
+    <span class="c"># before if received all the data. Using loop here until all</span>
+    <span class="c"># the data is received</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">while</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="n">rda_msg_data_full_t</span><span class="o">.</span><span class="n">varLength</span><span class="p">:</span>
+        <span class="n">msg_var</span> <span class="o">=</span> <span class="p">(</span><span class="n">c_char</span> <span class="o">*</span> <span class="p">(</span><span class="n">rda_msg_data_full_t</span><span class="o">.</span><span class="n">varLength</span> <span class="o">-</span> <span class="n">n</span><span class="p">))</span> \
+                          <span class="o">.</span><span class="n">from_buffer</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">sizeof</span><span class="p">(</span><span class="n">msg_fixed</span><span class="p">)</span> <span class="o">+</span> <span class="n">n</span><span class="p">)</span>
+        <span class="n">n</span> <span class="o">+=</span> <span class="n">s</span><span class="o">.</span><span class="n">recv_into</span><span class="p">(</span><span class="n">msg_var</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">rda_msg_data_full_t</span><span class="o">.</span><span class="n">from_buffer</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="startmsg2string"><a class="viewcode-back" href="../modules/rdatools.html#rdatools.startmsg2string">[docs]</a><span class="k">def</span> <span class="nf">startmsg2string</span><span class="p">(</span><span class="n">msg</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Converts an RDA start message (rda_msg_start_full_t) to string</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    msg : rda_msg_start_full_t:</span>
+<span class="sd">        RDA start message</span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------    </span>
+<span class="sd">    string</span>
+<span class="sd">    </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">string</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%d</span><span class="s"> channels: </span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">msg</span><span class="o">.</span><span class="n">nChannels</span>
+    <span class="n">sChannelNames</span> <span class="o">=</span> <span class="n">ubyte2string</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">sChannelNames</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\x00</span><span class="s">&#39;</span><span class="p">)</span>
+    <span class="n">dResolutions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">dResolutions</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">double</span><span class="p">)</span>
+    
+    <span class="k">for</span> <span class="n">chName</span><span class="p">,</span> <span class="n">chRes</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">sChannelNames</span><span class="p">,</span> <span class="n">dResolutions</span><span class="p">):</span>
+        <span class="n">string</span> <span class="o">+=</span> <span class="n">chName</span> <span class="o">+</span> <span class="s">&#39;: </span><span class="si">%s</span><span class="s"> uV</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">chRes</span>
+    
+    <span class="k">return</span> <span class="n">string</span>
+</div>
+<div class="viewcode-block" id="ubyte2string"><a class="viewcode-back" href="../modules/rdatools.html#rdatools.ubyte2string">[docs]</a><span class="k">def</span> <span class="nf">ubyte2string</span><span class="p">(</span><span class="n">array</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Converts a ctypes ubyte array to string</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    array : ctypes byte array</span>
+<span class="sd">        input array</span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    string</span>
+<span class="sd">    </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="nb">chr</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">array</span><span class="p">])</span>
+</div>
+<div class="viewcode-block" id="check_received"><a class="viewcode-back" href="../modules/rdatools.html#rdatools.check_received">[docs]</a><span class="k">def</span> <span class="nf">check_received</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Checks whether the message is completely received. If OK, return</span>
+<span class="sd">    nothing, else, raises an exception</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    n : int</span>
+<span class="sd">        number of bytes received (returned by socket.recv_int())</span>
+<span class="sd">    msg : ctypes structure</span>
+<span class="sd">        message received</span>
+<span class="sd">    </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">n</span> <span class="o">!=</span> <span class="n">sizeof</span><span class="p">(</span><span class="n">msg</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;Failed to receive packet, received </span><span class="si">%s</span><span class="s"> bytes,&#39;</span> <span class="o">+</span> 
+                        <span class="s">&#39;should be </span><span class="si">%s</span><span class="s"> bytes&#39;</span>
+                        <span class="o">%</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">sizeof</span><span class="p">(</span><span class="n">msg</span><span class="p">)))</span>
+    <span class="k">else</span><span class="p">:</span> <span class="k">pass</span>
+    </div>
+<div class="viewcode-block" id="validate_rda_guid"><a class="viewcode-back" href="../modules/rdatools.html#rdatools.validate_rda_guid">[docs]</a><span class="k">def</span> <span class="nf">validate_rda_guid</span><span class="p">(</span><span class="n">hdr</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Checks whether the signature of the message is valid, given its header</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    hdr : rda_msg_hdr_t</span>
+<span class="sd">        message header</span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    result : bool</span>
+<span class="sd">        verification result</span>
+<span class="sd">    </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">for</span> <span class="n">b1</span><span class="p">,</span> <span class="n">b2</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">hdr</span><span class="o">.</span><span class="n">guid</span><span class="p">,</span> <span class="n">rda</span><span class="o">.</span><span class="n">RDA_GUID</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">b1</span> <span class="o">!=</span> <span class="n">b2</span><span class="p">:</span> <span class="k">return</span> <span class="bp">False</span>
+    <span class="k">return</span> <span class="bp">True</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">rdaclient.py 0.1 documentation</a> &raquo;</li>
+          <li><a href="index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Dmytro Bielievtsov.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+  </body>
+</html>

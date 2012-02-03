@@ -1,0 +1,641 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>ringbuffer &mdash; rdaclient.py 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="rdaclient.py 0.1 documentation" href="../index.html" />
+    <link rel="up" title="Module code" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">rdaclient.py 0.1 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for ringbuffer</h1><div class="highlight"><pre>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">Provides a two-dimensional circular buffer with homogeneous elements</span>
+
+<span class="sd">See other classes&#39; docstrings for more information:</span>
+
+<span class="sd">* `RingBuffer`: the buffer</span>
+<span class="sd">* `datatypes`: supported datatypes</span>
+<span class="sd">* `BufferHeader`: header structure</span>
+<span class="sd">* `BufferError`: error definition</span>
+<span class="sd">    </span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="kn">import</span> <span class="n">Array</span>
+<span class="kn">import</span> <span class="nn">ctypes</span> <span class="kn">as</span> <span class="nn">c</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+<span class="n">__author__</span> <span class="o">=</span> <span class="s">&quot;Dmytro Bielievtsov&quot;</span>
+<span class="n">__email__</span> <span class="o">=</span> <span class="s">&quot;belevtsoff@gmail.com&quot;</span>
+
+<div class="viewcode-block" id="RingBuffer"><a class="viewcode-back" href="../modules/ringbuffer.html#ringbuffer.RingBuffer">[docs]</a><span class="k">class</span> <span class="nc">RingBuffer</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Provides a two-dimensional circular buffer with homogeneous elements</span>
+<span class="sd">    </span>
+<span class="sd">    The buffer can be used simultaneously by several processes, because</span>
+<span class="sd">    both data and metadata are stored in a single sharectypes byte array.</span>
+<span class="sd">    First, the buffer object is created and initialized in one of the </span>
+<span class="sd">    processes. Second, its raw array is shared with others. Third, those</span>
+<span class="sd">    processes create their own RingBuffer objects and initialize them</span>
+<span class="sd">    so that they all point to the same shared raw array</span>
+<span class="sd">    (see initialize_from_raw method&#39;s docstring).</span>
+<span class="sd">    </span>
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    is_initialized</span>
+<span class="sd">    nChannels</span>
+<span class="sd">    bufSize</span>
+<span class="sd">    pocketSize</span>
+<span class="sd">    nptype</span>
+<span class="sd">    raw</span>
+<span class="sd">    writePtr</span>
+<span class="sd">    </span>
+<span class="sd">    See Also</span>
+<span class="sd">    --------</span>
+<span class="sd">    initialize: allocate new buffer</span>
+<span class="sd">    initialize_from_raw: use another buffer&#39;s raw array</span>
+<span class="sd">    </span>
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    The buffer consists of a buffer interface (self) and the raw</span>
+<span class="sd">    sharectypes byte array which has header, data, and pocket subsections</span>
+<span class="sd">    (self.raw).</span>
+<span class="sd">    </span>
+<span class="sd">    1. header section</span>
+<span class="sd">    Contains the metadata such as size of the sections, current write</span>
+<span class="sd">    pointer, datatype, number of channels (number of columns) and total</span>
+<span class="sd">    number of samples (not bytes) written</span>
+<span class="sd">    </span>
+<span class="sd">    2. data section</span>
+<span class="sd">    Contains the actual data in the buffer. When the write pointer reaches</span>
+<span class="sd">    the end of the section it jumps to the beginning overwriting the old</span>
+<span class="sd">    data.</span>
+<span class="sd">    </span>
+<span class="sd">    3. pocket section</span>
+<span class="sd">    The pocket section always contains the same data as the leftmost such</span>
+<span class="sd">    chunk of the data section. This is done to avoid data copies when</span>
+<span class="sd">    reading a data chunk (up to the size of the pocket) first part of</span>
+<span class="sd">    which happens to be located at the end of the data section while the</span>
+<span class="sd">    second - already in the beginning. This might be useful when reading</span>
+<span class="sd">    the data with a sliding window.</span>
+<span class="sd">    </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;ringbuffer&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__initialized</span> <span class="o">=</span> <span class="bp">False</span>
+    
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        __str__ overload for printing buffer contents</span>
+<span class="sd">        </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__buf</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">bufSize</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">__str__</span><span class="p">()</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pocket</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">__str__</span><span class="p">()</span>
+    
+    <span class="k">def</span> <span class="nf">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        __getattr__ overload to avoid accessing buffer attributes before</span>
+<span class="sd">        it&#39;s initialized </span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------      </span>
+<span class="sd">        name : string</span>
+<span class="sd">            name of the attribute</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        requested attribute, if possible</span>
+<span class="sd">            </span>
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        BufferError</span>
+<span class="sd">            If the buffer is not initialized</span>
+<span class="sd">        </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">init</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__initialized</span>
+        
+        <span class="k">if</span> <span class="n">init</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">object</span><span class="o">.</span><span class="n">__getattribute__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">BufferError</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    
+    <span class="c">#------------------------------------------------------------------------------</span>
+    <span class="c"># Properties    </span>
+    
+    <span class="c"># number of written samples</span>
+    <span class="k">def</span> <span class="nf">__get_nsamples</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__hdr</span><span class="o">.</span><span class="n">nSamplesWritten</span>
+    <span class="k">def</span> <span class="nf">__set_nsamples</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__hdr</span><span class="o">.</span><span class="n">nSamplesWritten</span> <span class="o">=</span> <span class="n">value</span>
+    <span class="n">nSamplesWritten</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="n">__get_nsamples</span><span class="p">,</span> <span class="n">__set_nsamples</span><span class="p">)</span>        
+    
+    <span class="c"># read-only attributes</span>
+    <span class="n">writePtr</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="k">lambda</span> <span class="bp">self</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">nSamplesWritten</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">bufSize</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span>
+                        <span class="s">&#39;Current write pointer position, read-only (int)&#39;</span><span class="p">)</span>
+    <span class="n">is_initialized</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="k">lambda</span> <span class="bp">self</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">__initialized</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span>
+                        <span class="s">&#39;Indicates whether the buffer is initialized, read-only (bool)&#39;</span><span class="p">)</span>
+    <span class="n">raw</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="k">lambda</span> <span class="bp">self</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">__raw</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span>
+                        <span class="s">&#39;Raw buffer array, read-only (sharedctypes, char)&#39;</span><span class="p">)</span>
+    <span class="n">nChannels</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="k">lambda</span> <span class="bp">self</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">__nChannels</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span>
+                        <span class="s">&#39;Dimensionality of a sample, read-only (int)&#39;</span><span class="p">)</span>
+    <span class="n">bufSize</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="k">lambda</span> <span class="bp">self</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">__bufSize</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span>
+                        <span class="s">&#39;The buffer capacity in samples, read-only (int)&#39;</span><span class="p">)</span>
+    <span class="n">pocketSize</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="k">lambda</span> <span class="bp">self</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pocketSize</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span>
+                        <span class="s">&#39;Size of the buffer pocket in samples, read-only (int)&#39;</span><span class="p">)</span>
+    <span class="n">nptype</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="k">lambda</span> <span class="bp">self</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">__nptype</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span>
+                        <span class="s">&#39;The type of the data in the buffer, read-only (string)&#39;</span><span class="p">)</span>
+    
+    <span class="c">#------------------------------------------------------------------------------</span>
+    
+<div class="viewcode-block" id="RingBuffer.initialize"><a class="viewcode-back" href="../modules/ringbuffer.html#ringbuffer.RingBuffer.initialize">[docs]</a>    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nChannels</span><span class="p">,</span> <span class="n">nSamples</span><span class="p">,</span> <span class="n">windowSize</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">nptype</span><span class="o">=</span><span class="s">&#39;float32&#39;</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Initializes the buffer with a new raw array</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        nChannels : int</span>
+<span class="sd">            dimensionality of a single sample</span>
+<span class="sd">        nSamples : int</span>
+<span class="sd">            the buffer capacity in samples</span>
+<span class="sd">        windowSize : int, optional</span>
+<span class="sd">            optional, the size of the window to be used for reading the</span>
+<span class="sd">            data. The pocket of the this size will be created</span>
+<span class="sd">        nptype : string, optional</span>
+<span class="sd">            the type of the data to be stored</span>
+<span class="sd">                           </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__initialized</span> <span class="o">=</span> <span class="bp">True</span>
+        
+        <span class="c"># checking parameters</span>
+        <span class="k">if</span> <span class="n">nChannels</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s">&#39;nChannels must be a positive integer, setting to 1&#39;</span><span class="p">)</span>
+            <span class="n">nChannels</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">nSamples</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s">&#39;nSamples must be a positive integer, setting to 1&#39;</span><span class="p">)</span>
+            <span class="n">nSamples</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">windowSize</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s">&#39;wondowSize must be a positive integer, setting to 1&#39;</span><span class="p">)</span>
+            <span class="n">windowSize</span> <span class="o">=</span> <span class="mi">1</span>
+        
+        <span class="c"># initializing</span>
+        <span class="n">sizeBytes</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">sizeof</span><span class="p">(</span><span class="n">BufferHeader</span><span class="p">)</span> <span class="o">+</span> \
+                    <span class="p">(</span><span class="n">nSamples</span> <span class="o">+</span> <span class="n">windowSize</span><span class="p">)</span> <span class="o">*</span> <span class="n">nChannels</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">nptype</span><span class="p">)</span><span class="o">.</span><span class="n">itemsize</span>
+        
+        <span class="n">raw</span> <span class="o">=</span> <span class="n">Array</span><span class="p">(</span><span class="s">&#39;c&#39;</span><span class="p">,</span> <span class="n">sizeBytes</span><span class="p">)</span>
+        <span class="n">hdr</span> <span class="o">=</span> <span class="n">BufferHeader</span><span class="o">.</span><span class="n">from_buffer</span><span class="p">(</span><span class="n">raw</span><span class="o">.</span><span class="n">get_obj</span><span class="p">())</span>
+        
+        <span class="n">hdr</span><span class="o">.</span><span class="n">bufSizeBytes</span> <span class="o">=</span> <span class="n">nSamples</span> <span class="o">*</span> <span class="n">nChannels</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">nptype</span><span class="p">)</span><span class="o">.</span><span class="n">itemsize</span>
+        <span class="n">hdr</span><span class="o">.</span><span class="n">pocketSizeBytes</span> <span class="o">=</span> <span class="n">windowSize</span> <span class="o">*</span> <span class="n">nChannels</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">nptype</span><span class="p">)</span><span class="o">.</span><span class="n">itemsize</span>
+        <span class="n">hdr</span><span class="o">.</span><span class="n">dataType</span> <span class="o">=</span> <span class="n">datatypes</span><span class="o">.</span><span class="n">get_code</span><span class="p">(</span><span class="n">nptype</span><span class="p">)</span>
+        <span class="n">hdr</span><span class="o">.</span><span class="n">nChannels</span> <span class="o">=</span> <span class="n">nChannels</span>
+        <span class="n">hdr</span><span class="o">.</span><span class="n">nSamplesWritten</span> <span class="o">=</span> <span class="mi">0</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">initialize_from_raw</span><span class="p">(</span><span class="n">raw</span><span class="o">.</span><span class="n">get_obj</span><span class="p">())</span>
+    </div>
+<div class="viewcode-block" id="RingBuffer.initialize_from_raw"><a class="viewcode-back" href="../modules/ringbuffer.html#ringbuffer.RingBuffer.initialize_from_raw">[docs]</a>    <span class="k">def</span> <span class="nf">initialize_from_raw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">raw</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Initializes the buffer with the compatible external raw array. All</span>
+<span class="sd">        the metadata will be read from the header region of this array.   </span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        raw : sharedctypes char array</span>
+<span class="sd">            the raw array to initialize with</span>
+<span class="sd">                           </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__initialized</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="n">hdr</span> <span class="o">=</span> <span class="n">BufferHeader</span><span class="o">.</span><span class="n">from_buffer</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span>
+        
+        <span class="c"># datatype</span>
+        <span class="n">nptype</span> <span class="o">=</span> <span class="n">datatypes</span><span class="o">.</span><span class="n">get_type</span><span class="p">(</span><span class="n">hdr</span><span class="o">.</span><span class="n">dataType</span><span class="p">)</span>
+        
+        <span class="n">bufOffset</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">sizeof</span><span class="p">(</span><span class="n">hdr</span><span class="p">)</span>
+        <span class="n">pocketOffset</span> <span class="o">=</span> <span class="n">bufOffset</span> <span class="o">+</span> <span class="n">hdr</span><span class="o">.</span><span class="n">bufSizeBytes</span>
+        
+        <span class="n">bufSizeFlat</span> <span class="o">=</span> <span class="n">hdr</span><span class="o">.</span><span class="n">bufSizeBytes</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">nptype</span><span class="p">)</span><span class="o">.</span><span class="n">itemsize</span>
+        <span class="n">pocketSizeFlat</span> <span class="o">=</span> <span class="n">hdr</span><span class="o">.</span><span class="n">pocketSizeBytes</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">nptype</span><span class="p">)</span><span class="o">.</span><span class="n">itemsize</span>
+         
+        <span class="c"># create numpy view objects pointing to the raw array</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__raw</span> <span class="o">=</span> <span class="n">raw</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__hdr</span> <span class="o">=</span> <span class="n">hdr</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__buf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">nptype</span><span class="p">,</span> <span class="n">bufSizeFlat</span><span class="p">,</span> <span class="n">bufOffset</span><span class="p">)</span>\
+                                          <span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">hdr</span><span class="o">.</span><span class="n">nChannels</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__pocket</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">nptype</span><span class="p">,</span> <span class="n">pocketSizeFlat</span><span class="p">,</span> <span class="n">pocketOffset</span><span class="p">)</span>\
+                                                   <span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">hdr</span><span class="o">.</span><span class="n">nChannels</span><span class="p">))</span>
+        
+        <span class="c"># helper variables</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__nChannels</span> <span class="o">=</span> <span class="n">hdr</span><span class="o">.</span><span class="n">nChannels</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__bufSize</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__buf</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__pocketSize</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__pocket</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__nptype</span> <span class="o">=</span> <span class="n">nptype</span>
+    </div>
+    <span class="k">def</span> <span class="nf">__get_local_idx</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">startIdx</span><span class="p">,</span> <span class="n">endIdx</span><span class="p">,</span> <span class="n">nocheck</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Checks for availability of requested chuck and returns local</span>
+<span class="sd">        indices if the requested chunk is non-contiguous, uses a pocket,</span>
+<span class="sd">        if the pocket is too small uses slow (copy) mode and issues a</span>
+<span class="sd">        corresponding warning</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        startIdx : int</span>
+<span class="sd">            chunk start index (in samples)</span>
+<span class="sd">        endIdx : int</span>
+<span class="sd">            chunk end index (in samples)</span>
+<span class="sd">        nocheck : bool, optional</span>
+<span class="sd">            whether to check availability</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        idx: slice tuple or list of indices depending on the mode</span>
+<span class="sd">        </span>
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        BufferError</span>
+<span class="sd">            If requested samples are not available and `nocheck` is set to</span>
+<span class="sd">            True</span>
+<span class="sd">        </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        
+        <span class="c"># availability check</span>
+        <span class="n">e</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_availablility</span><span class="p">(</span><span class="n">startIdx</span><span class="p">,</span> <span class="n">endIdx</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">e</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">nocheck</span><span class="p">:</span> <span class="k">raise</span> <span class="n">BufferError</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+        
+        <span class="n">chunkSize</span> <span class="o">=</span> <span class="n">endIdx</span> <span class="o">-</span> <span class="n">startIdx</span>
+        <span class="n">localStartIdx</span> <span class="o">=</span> <span class="n">startIdx</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">bufSize</span>
+        <span class="n">localEndIdx</span> <span class="o">=</span> <span class="n">endIdx</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">bufSize</span>
+        
+        <span class="c"># whole buffer</span>
+        <span class="k">if</span> <span class="n">localStartIdx</span> <span class="o">==</span> <span class="n">localEndIdx</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">localStartIdx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bufSize</span>
+        
+        <span class="c"># contiguous chunk</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">localEndIdx</span> <span class="o">-</span> <span class="n">localStartIdx</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">localStartIdx</span><span class="p">,</span> <span class="n">localEndIdx</span>
+        <span class="c"># split chunk</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># can&#39;t use pocket</span>
+            <span class="k">if</span> <span class="n">chunkSize</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">pocketSize</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s">&#39;buffer: slow mode&#39;</span><span class="p">)</span>
+                <span class="n">idxList</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">localStartIdx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bufSize</span><span class="p">)</span>
+                <span class="n">idxList</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">localEndIdx</span><span class="p">))</span>
+                <span class="k">return</span> <span class="n">idxList</span>
+            <span class="c"># using pocket</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">chunkSize</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pocketSize</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;buffer: buffer pocket is larger than the window size&#39;</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">localStartIdx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bufSize</span> <span class="o">+</span> <span class="n">localEndIdx</span>
+
+    <span class="k">def</span> <span class="nf">__write_buffer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">idx</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Writes data to buffer.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        data : ndarray</span>
+<span class="sd">            properly shaped numpy array</span>
+<span class="sd">        idx : tuple or list</span>
+<span class="sd">            local indices, returned by the __get_local_idx method</span>
+<span class="sd">        </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="c"># if the slicing (contiguous chunk)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="p">(</span><span class="n">idx</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">idx</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            
+            <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="o">=</span> <span class="n">idx</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__buf</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
+            
+            <span class="c"># copying needed parts to/from the pocket</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">bufSize</span> <span class="o">&lt;=</span> <span class="n">j</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__buf</span><span class="p">[:</span><span class="n">j</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">bufSize</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__pocket</span><span class="p">[:</span><span class="n">j</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">bufSize</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">j</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pocketSize</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__pocket</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__buf</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">pocketSize</span> <span class="o">&lt;=</span> <span class="n">j</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__pocket</span><span class="p">[</span><span class="n">i</span><span class="p">:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__buf</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">pocketSize</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        
+        <span class="c"># if the advanced indexing is used (the pocket is too small)             </span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">idx</span><span class="p">),</span> <span class="nb">max</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__buf</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__pocket</span><span class="p">[:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__buf</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">pocketSize</span><span class="p">]</span>
+        
+    <span class="k">def</span> <span class="nf">__read_buffer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="p">):</span>       
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Reads the data from buffer</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------        </span>
+<span class="sd">        idx : tuple or list</span>
+<span class="sd">            local indices, returned by the __get_local_idx method</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy view on the requested chunk (ndarray)</span>
+<span class="sd">            </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="p">(</span><span class="n">idx</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">idx</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="o">=</span> <span class="n">idx</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__buf</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">j</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__buf</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+    
+<div class="viewcode-block" id="RingBuffer.check_availablility"><a class="viewcode-back" href="../modules/ringbuffer.html#ringbuffer.RingBuffer.check_availablility">[docs]</a>    <span class="k">def</span> <span class="nf">check_availablility</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sampleStart</span><span class="p">,</span> <span class="n">sampleEnd</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Checks whether the requested data samples are available.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------        </span>
+<span class="sd">        sampleStart : int</span>
+<span class="sd">            first sample index (included)</span>
+<span class="sd">        sampleEnd : int</span>
+<span class="sd">            last samples index (excluded)</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------        </span>
+<span class="sd">        0</span>
+<span class="sd">            if the data is available</span>
+<span class="sd">        2</span>
+<span class="sd">            if (part of) the data is already overwritten</span>
+<span class="sd">        3</span>
+<span class="sd">            if (part of) the data is not yet in the buffer</span>
+<span class="sd">                 </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">sampleStart</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">sampleEnd</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">5</span>
+        <span class="k">if</span> <span class="n">sampleEnd</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">nSamplesWritten</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">3</span> <span class="c"># data is not ready</span>
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nSamplesWritten</span> <span class="o">-</span> <span class="n">sampleStart</span><span class="p">)</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">bufSize</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">2</span> <span class="c"># data is already erased</span>
+        
+        <span class="k">return</span> <span class="mi">0</span>
+    </div>
+<div class="viewcode-block" id="RingBuffer.get_data"><a class="viewcode-back" href="../modules/ringbuffer.html#ringbuffer.RingBuffer.get_data">[docs]</a>    <span class="k">def</span> <span class="nf">get_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sampleStart</span><span class="p">,</span> <span class="n">sampleEnd</span><span class="p">,</span> <span class="n">wprotect</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Gets the data from the buffer. If possible, the data is returned</span>
+<span class="sd">        in the form of a numpy view on the corresponding chunk (without</span>
+<span class="sd">        copy). If the data is not available, rises an exception</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        sampleStart : int</span>
+<span class="sd">            first sample index (included)</span>
+<span class="sd">        sampleEnd : int</span>
+<span class="sd">            last samples index (excluded)</span>
+<span class="sd">        wprotect : bool, optional</span>
+<span class="sd">            protect returned views from occasional writes</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------        </span>
+<span class="sd">        data : data chunk (numpy view or numpy array)</span>
+<span class="sd">        </span>
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        BufferError</span>
+<span class="sd">            If the data is not available</span>
+<span class="sd">        </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__get_local_idx</span><span class="p">(</span><span class="n">sampleStart</span><span class="p">,</span> <span class="n">sampleEnd</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__read_buffer</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">setflags</span><span class="p">(</span><span class="n">write</span><span class="o">=</span><span class="ow">not</span> <span class="n">wprotect</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">data</span>
+        </div>
+<div class="viewcode-block" id="RingBuffer.put_data"><a class="viewcode-back" href="../modules/ringbuffer.html#ringbuffer.RingBuffer.put_data">[docs]</a>    <span class="k">def</span> <span class="nf">put_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Pushes the data to the buffer</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------       </span>
+<span class="sd">        data : ndarray</span>
+<span class="sd">            properly shaped numpy array</span>
+<span class="sd">        </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">datashape</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">datashape</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nChannels</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">BufferError</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">datashape</span> <span class="o">=</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nChannels</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">BufferError</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+
+        <span class="n">sampleEnd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nSamplesWritten</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">sampleStart</span> <span class="o">=</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">bufSize</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">sampleEnd</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">bufSize</span><span class="p">)</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">nSamplesWritten</span>
+        
+        <span class="n">idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__get_local_idx</span><span class="p">(</span><span class="n">sampleStart</span><span class="p">,</span> <span class="n">sampleEnd</span><span class="p">,</span> <span class="n">nocheck</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__write_buffer</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">datashape</span><span class="p">)[</span><span class="n">sampleStart</span> <span class="o">-</span> <span class="n">sampleEnd</span> <span class="p">:],</span> <span class="n">idx</span><span class="p">)</span>
+        <span class="kn">import</span> <span class="nn">time</span><span class="p">;</span> <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.001</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nSamplesWritten</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="datatypes"><a class="viewcode-back" href="../modules/ringbuffer.html#ringbuffer.datatypes">[docs]</a><span class="k">class</span> <span class="nc">datatypes</span><span class="p">():</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    A helper class to interpret the typecode read from buffer header.</span>
+<span class="sd">    To add new supported datatypes, add them to the &#39;type&#39; dictionary</span>
+<span class="sd">    </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">types</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span><span class="s">&#39;float32&#39;</span><span class="p">,</span>
+             <span class="mi">1</span><span class="p">:</span><span class="s">&#39;int16&#39;</span><span class="p">}</span>
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="datatypes.get_code"><a class="viewcode-back" href="../modules/ringbuffer.html#ringbuffer.datatypes.get_code">[docs]</a>    <span class="k">def</span> <span class="nf">get_code</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="nb">type</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Gets buffer typecode given numpy datatype</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------        </span>
+<span class="sd">        type : string</span>
+<span class="sd">            numpy datatype (e.g. &#39;float32&#39;)</span>
+<span class="sd">        </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">cls</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">values</span><span class="p">()</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="nb">type</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">cls</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">keys</span><span class="p">()[</span><span class="n">idx</span><span class="p">]</span></div>
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="datatypes.get_type"><a class="viewcode-back" href="../modules/ringbuffer.html#ringbuffer.datatypes.get_type">[docs]</a>    <span class="k">def</span> <span class="nf">get_type</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">code</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Gets numpy datatype given a buffer typecode</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------            </span>
+<span class="sd">        code : int</span>
+<span class="sd">            typecode (e.g. 0)</span>
+<span class="sd">        </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="n">cls</span><span class="o">.</span><span class="n">types</span><span class="p">[</span><span class="n">code</span><span class="p">]</span>
+    
+    </div></div>
+<div class="viewcode-block" id="BufferHeader"><a class="viewcode-back" href="../modules/ringbuffer.html#ringbuffer.BufferHeader">[docs]</a><span class="k">class</span> <span class="nc">BufferHeader</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">Structure</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    A ctypes structure describing the buffer header </span>
+<span class="sd">    </span>
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    bufSizeBytes : c_ulong</span>
+<span class="sd">        size of the buffer in bytes, excluding header and pocket</span>
+<span class="sd">    pocketSizeBytes : c_ulong</span>
+<span class="sd">        size of the buffer in bytes</span>
+<span class="sd">    dataType : c_uint</span>
+<span class="sd">        typecode of the data stored in the buffer</span>
+<span class="sd">    nChannels : c_ulong</span>
+<span class="sd">        sample dimensionality</span>
+<span class="sd">    nSamplesWritten : c_ulong</span>
+<span class="sd">        the total number of sample, written after the buffer allocation</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">_pack_</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">_fields_</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="p">(</span><span class="s">&#39;bufSizeBytes&#39;</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">c_ulong</span><span class="p">),</span>
+                <span class="p">(</span><span class="s">&#39;pocketSizeBytes&#39;</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">c_ulong</span><span class="p">),</span>
+                <span class="p">(</span><span class="s">&#39;dataType&#39;</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">c_uint</span><span class="p">),</span>
+                <span class="p">(</span><span class="s">&#39;nChannels&#39;</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">c_ulong</span><span class="p">),</span>
+                <span class="p">(</span><span class="s">&#39;nSamplesWritten&#39;</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">c_ulong</span><span class="p">)</span>
+                <span class="p">]</span>
+    </div>
+<div class="viewcode-block" id="BufferError"><a class="viewcode-back" href="../modules/ringbuffer.html#ringbuffer.BufferError">[docs]</a><span class="k">class</span> <span class="nc">BufferError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Represents different types of buffer errors</span>
+<span class="sd">    </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">code</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Initializes a BufferError with given error code</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        code : int</span>
+<span class="sd">            error code</span>
+<span class="sd">        </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">code</span> <span class="o">=</span> <span class="n">code</span>
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Prints the error</span>
+<span class="sd">        </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">code</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s">&#39;buffer is not initialized (error </span><span class="si">%s</span><span class="s">)&#39;</span> <span class="o">%</span> <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">code</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">code</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="s">&#39;unable to get indices (error </span><span class="si">%s</span><span class="s">)&#39;</span> <span class="o">%</span> <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">code</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">code</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s">&#39;writing incompatible data (error </span><span class="si">%s</span><span class="s">)&#39;</span> <span class="o">%</span> <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">code</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">code</span> <span class="o">==</span> <span class="mi">5</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s">&#39;negative index (error </span><span class="si">%s</span><span class="s">)&#39;</span> <span class="o">%</span> <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">code</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s">&#39;(error </span><span class="si">%s</span><span class="s">)&#39;</span> <span class="o">%</span> <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">code</span><span class="p">)</span>
+
+
+
+</div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">buf1</span> <span class="o">=</span> <span class="n">RingBuffer</span><span class="p">()</span>
+    <span class="n">buf2</span> <span class="o">=</span> <span class="n">RingBuffer</span><span class="p">()</span>
+    
+<span class="c">#    buf1.initialize(2, 10, 3)</span>
+    <span class="n">buf1</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="n">buf2</span><span class="o">.</span><span class="n">initialize_from_raw</span><span class="p">(</span><span class="n">buf1</span><span class="o">.</span><span class="n">raw</span><span class="p">)</span>
+    
+    <span class="n">buf1</span><span class="o">.</span><span class="n">put_data</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">]]))</span>
+    <span class="n">buf2</span><span class="o">.</span><span class="n">put_data</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span> <span class="p">[</span><span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">]]))</span>
+    
+    <span class="k">print</span> <span class="n">buf1</span>
+    <span class="k">print</span> <span class="n">buf2</span>
+    
+    <span class="n">dat</span> <span class="o">=</span> <span class="n">buf2</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+    <span class="n">dat</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">100</span>
+    
+    <span class="k">print</span> <span class="n">buf1</span>
+    <span class="k">print</span> <span class="n">buf2</span>
+    
+    
+    
+    
+    
+    
+    
+    
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">rdaclient.py 0.1 documentation</a> &raquo;</li>
+          <li><a href="index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Dmytro Bielievtsov.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+  </body>
+</html>

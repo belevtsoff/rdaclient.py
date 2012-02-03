@@ -1,0 +1,524 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Ring Buffer (ringbuffer) &mdash; rdaclient.py 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="rdaclient.py 0.1 documentation" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">rdaclient.py 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-ringbuffer">
+<span id="ring-buffer-ringbuffer"></span><h1>Ring Buffer (<a class="reference internal" href="#module-ringbuffer" title="ringbuffer"><tt class="xref py py-mod docutils literal"><span class="pre">ringbuffer</span></tt></a>)<a class="headerlink" href="#module-ringbuffer" title="Permalink to this headline">¶</a></h1>
+<p>Provides a two-dimensional circular buffer with homogeneous elements</p>
+<p>See other classes&#8217; docstrings for more information:</p>
+<ul class="simple">
+<li><cite>RingBuffer</cite>: the buffer</li>
+<li><cite>datatypes</cite>: supported datatypes</li>
+<li><cite>BufferHeader</cite>: header structure</li>
+<li><cite>BufferError</cite>: error definition</li>
+</ul>
+<dl class="class">
+<dt id="ringbuffer.RingBuffer">
+<em class="property">class </em><tt class="descclassname">ringbuffer.</tt><tt class="descname">RingBuffer</tt><a class="reference internal" href="../_modules/ringbuffer.html#RingBuffer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ringbuffer.RingBuffer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Provides a two-dimensional circular buffer with homogeneous elements</p>
+<p>The buffer can be used simultaneously by several processes, because
+both data and metadata are stored in a single sharectypes byte array.
+First, the buffer object is created and initialized in one of the 
+processes. Second, its raw array is shared with others. Third, those
+processes create their own RingBuffer objects and initialize them
+so that they all point to the same shared raw array
+(see initialize_from_raw method&#8217;s docstring).</p>
+<div class="admonition-see-also admonition seealso">
+<p class="first admonition-title">See also</p>
+<dl class="last docutils">
+<dt><a class="reference internal" href="#ringbuffer.RingBuffer.initialize" title="ringbuffer.RingBuffer.initialize"><tt class="xref py py-obj docutils literal"><span class="pre">initialize</span></tt></a></dt>
+<dd>allocate new buffer</dd>
+<dt><a class="reference internal" href="#ringbuffer.RingBuffer.initialize_from_raw" title="ringbuffer.RingBuffer.initialize_from_raw"><tt class="xref py py-obj docutils literal"><span class="pre">initialize_from_raw</span></tt></a></dt>
+<dd>use another buffer&#8217;s raw array</dd>
+</dl>
+</div>
+<p class="rubric">Notes</p>
+<p>The buffer consists of a buffer interface (self) and the raw
+sharectypes byte array which has header, data, and pocket subsections
+(self.raw).</p>
+<p>1. header section
+Contains the metadata such as size of the sections, current write
+pointer, datatype, number of channels (number of columns) and total
+number of samples (not bytes) written</p>
+<p>2. data section
+Contains the actual data in the buffer. When the write pointer reaches
+the end of the section it jumps to the beginning overwriting the old
+data.</p>
+<p>3. pocket section
+The pocket section always contains the same data as the leftmost such
+chunk of the data section. This is done to avoid data copies when
+reading a data chunk (up to the size of the pocket) first part of
+which happens to be located at the end of the data section while the
+second - already in the beginning. This might be useful when reading
+the data with a sliding window.</p>
+<p class="rubric">Attributes</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#ringbuffer.RingBuffer.is_initialized" title="ringbuffer.RingBuffer.is_initialized"><tt class="xref py py-obj docutils literal"><span class="pre">is_initialized</span></tt></a></td>
+<td>Indicates whether the buffer is initialized, read-only (bool)</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#ringbuffer.RingBuffer.nChannels" title="ringbuffer.RingBuffer.nChannels"><tt class="xref py py-obj docutils literal"><span class="pre">nChannels</span></tt></a></td>
+<td>Dimensionality of a sample, read-only (int)</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#ringbuffer.RingBuffer.bufSize" title="ringbuffer.RingBuffer.bufSize"><tt class="xref py py-obj docutils literal"><span class="pre">bufSize</span></tt></a></td>
+<td>The buffer capacity in samples, read-only (int)</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#ringbuffer.RingBuffer.pocketSize" title="ringbuffer.RingBuffer.pocketSize"><tt class="xref py py-obj docutils literal"><span class="pre">pocketSize</span></tt></a></td>
+<td>Size of the buffer pocket in samples, read-only (int)</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#ringbuffer.RingBuffer.nptype" title="ringbuffer.RingBuffer.nptype"><tt class="xref py py-obj docutils literal"><span class="pre">nptype</span></tt></a></td>
+<td>The type of the data in the buffer, read-only (string)</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#ringbuffer.RingBuffer.raw" title="ringbuffer.RingBuffer.raw"><tt class="xref py py-obj docutils literal"><span class="pre">raw</span></tt></a></td>
+<td>Raw buffer array, read-only (sharedctypes, char)</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#ringbuffer.RingBuffer.writePtr" title="ringbuffer.RingBuffer.writePtr"><tt class="xref py py-obj docutils literal"><span class="pre">writePtr</span></tt></a></td>
+<td>Current write pointer position, read-only (int)</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#ringbuffer.RingBuffer.check_availablility" title="ringbuffer.RingBuffer.check_availablility"><tt class="xref py py-obj docutils literal"><span class="pre">check_availablility</span></tt></a>(sampleStart,&nbsp;sampleEnd)</td>
+<td>Checks whether the requested data samples are available.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#ringbuffer.RingBuffer.get_data" title="ringbuffer.RingBuffer.get_data"><tt class="xref py py-obj docutils literal"><span class="pre">get_data</span></tt></a>(sampleStart,&nbsp;sampleEnd[,&nbsp;wprotect])</td>
+<td>Gets the data from the buffer.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#ringbuffer.RingBuffer.initialize" title="ringbuffer.RingBuffer.initialize"><tt class="xref py py-obj docutils literal"><span class="pre">initialize</span></tt></a>(nChannels,&nbsp;nSamples[,&nbsp;...])</td>
+<td>Initializes the buffer with a new raw array</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#ringbuffer.RingBuffer.initialize_from_raw" title="ringbuffer.RingBuffer.initialize_from_raw"><tt class="xref py py-obj docutils literal"><span class="pre">initialize_from_raw</span></tt></a>(raw)</td>
+<td>Initializes the buffer with the compatible external raw array.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#ringbuffer.RingBuffer.put_data" title="ringbuffer.RingBuffer.put_data"><tt class="xref py py-obj docutils literal"><span class="pre">put_data</span></tt></a>(data)</td>
+<td>Pushes the data to the buffer</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="ringbuffer.RingBuffer.bufSize">
+<tt class="descname">bufSize</tt><a class="headerlink" href="#ringbuffer.RingBuffer.bufSize" title="Permalink to this definition">¶</a></dt>
+<dd><p>The buffer capacity in samples, read-only (int)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ringbuffer.RingBuffer.check_availablility">
+<tt class="descname">check_availablility</tt><big>(</big><em>sampleStart</em>, <em>sampleEnd</em><big>)</big><a class="reference internal" href="../_modules/ringbuffer.html#RingBuffer.check_availablility"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ringbuffer.RingBuffer.check_availablility" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks whether the requested data samples are available.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>sampleStart</strong> : int</p>
+<blockquote>
+<div><p>first sample index (included)</p>
+</div></blockquote>
+<p><strong>sampleEnd</strong> : int</p>
+<blockquote>
+<div><p>last samples index (excluded)</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>0</strong> :</p>
+<blockquote>
+<div><p>if the data is available</p>
+</div></blockquote>
+<p><strong>2</strong> :</p>
+<blockquote>
+<div><p>if (part of) the data is already overwritten</p>
+</div></blockquote>
+<p><strong>3</strong> :</p>
+<blockquote class="last">
+<div><p>if (part of) the data is not yet in the buffer</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ringbuffer.RingBuffer.get_data">
+<tt class="descname">get_data</tt><big>(</big><em>sampleStart</em>, <em>sampleEnd</em>, <em>wprotect=True</em><big>)</big><a class="reference internal" href="../_modules/ringbuffer.html#RingBuffer.get_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ringbuffer.RingBuffer.get_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the data from the buffer. If possible, the data is returned
+in the form of a numpy view on the corresponding chunk (without
+copy). If the data is not available, rises an exception</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>sampleStart</strong> : int</p>
+<blockquote>
+<div><p>first sample index (included)</p>
+</div></blockquote>
+<p><strong>sampleEnd</strong> : int</p>
+<blockquote>
+<div><p>last samples index (excluded)</p>
+</div></blockquote>
+<p><strong>wprotect</strong> : bool, optional</p>
+<blockquote>
+<div><p>protect returned views from occasional writes</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>data</strong> : data chunk (numpy view or numpy array)</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises :</th><td class="field-body"><p class="first"><strong>BufferError</strong> :</p>
+<blockquote class="last">
+<div><p>If the data is not available</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ringbuffer.RingBuffer.initialize">
+<tt class="descname">initialize</tt><big>(</big><em>nChannels</em>, <em>nSamples</em>, <em>windowSize=1</em>, <em>nptype='float32'</em><big>)</big><a class="reference internal" href="../_modules/ringbuffer.html#RingBuffer.initialize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ringbuffer.RingBuffer.initialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initializes the buffer with a new raw array</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>nChannels</strong> : int</p>
+<blockquote>
+<div><p>dimensionality of a single sample</p>
+</div></blockquote>
+<p><strong>nSamples</strong> : int</p>
+<blockquote>
+<div><p>the buffer capacity in samples</p>
+</div></blockquote>
+<p><strong>windowSize</strong> : int, optional</p>
+<blockquote>
+<div><p>optional, the size of the window to be used for reading the
+data. The pocket of the this size will be created</p>
+</div></blockquote>
+<p><strong>nptype</strong> : string, optional</p>
+<blockquote class="last">
+<div><p>the type of the data to be stored</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="ringbuffer.RingBuffer.initialize_from_raw">
+<tt class="descname">initialize_from_raw</tt><big>(</big><em>raw</em><big>)</big><a class="reference internal" href="../_modules/ringbuffer.html#RingBuffer.initialize_from_raw"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ringbuffer.RingBuffer.initialize_from_raw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initializes the buffer with the compatible external raw array. All
+the metadata will be read from the header region of this array.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>raw</strong> : sharedctypes char array</p>
+<blockquote class="last">
+<div><p>the raw array to initialize with</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ringbuffer.RingBuffer.is_initialized">
+<tt class="descname">is_initialized</tt><a class="headerlink" href="#ringbuffer.RingBuffer.is_initialized" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates whether the buffer is initialized, read-only (bool)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ringbuffer.RingBuffer.nChannels">
+<tt class="descname">nChannels</tt><a class="headerlink" href="#ringbuffer.RingBuffer.nChannels" title="Permalink to this definition">¶</a></dt>
+<dd><p>Dimensionality of a sample, read-only (int)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ringbuffer.RingBuffer.nSamplesWritten">
+<tt class="descname">nSamplesWritten</tt><a class="headerlink" href="#ringbuffer.RingBuffer.nSamplesWritten" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="ringbuffer.RingBuffer.nptype">
+<tt class="descname">nptype</tt><a class="headerlink" href="#ringbuffer.RingBuffer.nptype" title="Permalink to this definition">¶</a></dt>
+<dd><p>The type of the data in the buffer, read-only (string)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ringbuffer.RingBuffer.pocketSize">
+<tt class="descname">pocketSize</tt><a class="headerlink" href="#ringbuffer.RingBuffer.pocketSize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Size of the buffer pocket in samples, read-only (int)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="ringbuffer.RingBuffer.put_data">
+<tt class="descname">put_data</tt><big>(</big><em>data</em><big>)</big><a class="reference internal" href="../_modules/ringbuffer.html#RingBuffer.put_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ringbuffer.RingBuffer.put_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pushes the data to the buffer</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>data</strong> : ndarray</p>
+<blockquote class="last">
+<div><p>properly shaped numpy array</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ringbuffer.RingBuffer.raw">
+<tt class="descname">raw</tt><a class="headerlink" href="#ringbuffer.RingBuffer.raw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Raw buffer array, read-only (sharedctypes, char)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ringbuffer.RingBuffer.writePtr">
+<tt class="descname">writePtr</tt><a class="headerlink" href="#ringbuffer.RingBuffer.writePtr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Current write pointer position, read-only (int)</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="ringbuffer.BufferHeader">
+<em class="property">class </em><tt class="descclassname">ringbuffer.</tt><tt class="descname">BufferHeader</tt><a class="reference internal" href="../_modules/ringbuffer.html#BufferHeader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ringbuffer.BufferHeader" title="Permalink to this definition">¶</a></dt>
+<dd><p>A ctypes structure describing the buffer header</p>
+<p class="rubric">Attributes</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#ringbuffer.BufferHeader.bufSizeBytes" title="ringbuffer.BufferHeader.bufSizeBytes"><tt class="xref py py-obj docutils literal"><span class="pre">bufSizeBytes</span></tt></a></td>
+<td>Structure/Union member</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#ringbuffer.BufferHeader.pocketSizeBytes" title="ringbuffer.BufferHeader.pocketSizeBytes"><tt class="xref py py-obj docutils literal"><span class="pre">pocketSizeBytes</span></tt></a></td>
+<td>Structure/Union member</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#ringbuffer.BufferHeader.dataType" title="ringbuffer.BufferHeader.dataType"><tt class="xref py py-obj docutils literal"><span class="pre">dataType</span></tt></a></td>
+<td>Structure/Union member</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#ringbuffer.BufferHeader.nChannels" title="ringbuffer.BufferHeader.nChannels"><tt class="xref py py-obj docutils literal"><span class="pre">nChannels</span></tt></a></td>
+<td>Structure/Union member</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#ringbuffer.BufferHeader.nSamplesWritten" title="ringbuffer.BufferHeader.nSamplesWritten"><tt class="xref py py-obj docutils literal"><span class="pre">nSamplesWritten</span></tt></a></td>
+<td>Structure/Union member</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="ringbuffer.BufferHeader.bufSizeBytes">
+<tt class="descname">bufSizeBytes</tt><a class="headerlink" href="#ringbuffer.BufferHeader.bufSizeBytes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ringbuffer.BufferHeader.dataType">
+<tt class="descname">dataType</tt><a class="headerlink" href="#ringbuffer.BufferHeader.dataType" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ringbuffer.BufferHeader.nChannels">
+<tt class="descname">nChannels</tt><a class="headerlink" href="#ringbuffer.BufferHeader.nChannels" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ringbuffer.BufferHeader.nSamplesWritten">
+<tt class="descname">nSamplesWritten</tt><a class="headerlink" href="#ringbuffer.BufferHeader.nSamplesWritten" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ringbuffer.BufferHeader.pocketSizeBytes">
+<tt class="descname">pocketSizeBytes</tt><a class="headerlink" href="#ringbuffer.BufferHeader.pocketSizeBytes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="exception">
+<dt id="ringbuffer.BufferError">
+<em class="property">exception </em><tt class="descclassname">ringbuffer.</tt><tt class="descname">BufferError</tt><big>(</big><em>code</em><big>)</big><a class="reference internal" href="../_modules/ringbuffer.html#BufferError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ringbuffer.BufferError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents different types of buffer errors</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="ringbuffer.datatypes">
+<em class="property">class </em><tt class="descclassname">ringbuffer.</tt><tt class="descname">datatypes</tt><a class="reference internal" href="../_modules/ringbuffer.html#datatypes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ringbuffer.datatypes" title="Permalink to this definition">¶</a></dt>
+<dd><p>A helper class to interpret the typecode read from buffer header.
+To add new supported datatypes, add them to the &#8216;type&#8217; dictionary</p>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#ringbuffer.datatypes.get_code" title="ringbuffer.datatypes.get_code"><tt class="xref py py-obj docutils literal"><span class="pre">get_code</span></tt></a>(type)</td>
+<td>Gets buffer typecode given numpy datatype</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#ringbuffer.datatypes.get_type" title="ringbuffer.datatypes.get_type"><tt class="xref py py-obj docutils literal"><span class="pre">get_type</span></tt></a>(code)</td>
+<td>Gets numpy datatype given a buffer typecode</td>
+</tr>
+</tbody>
+</table>
+<dl class="classmethod">
+<dt id="ringbuffer.datatypes.get_code">
+<em class="property">classmethod </em><tt class="descname">get_code</tt><big>(</big><em>type</em><big>)</big><a class="reference internal" href="../_modules/ringbuffer.html#datatypes.get_code"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ringbuffer.datatypes.get_code" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets buffer typecode given numpy datatype</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>type</strong> : string</p>
+<blockquote class="last">
+<div><p>numpy datatype (e.g. &#8216;float32&#8217;)</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="ringbuffer.datatypes.get_type">
+<em class="property">classmethod </em><tt class="descname">get_type</tt><big>(</big><em>code</em><big>)</big><a class="reference internal" href="../_modules/ringbuffer.html#datatypes.get_type"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ringbuffer.datatypes.get_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets numpy datatype given a buffer typecode</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>code</strong> : int</p>
+<blockquote class="last">
+<div><p>typecode (e.g. 0)</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="ringbuffer.datatypes.types">
+<tt class="descname">types</tt><em class="property"> = {0: 'float32', 1: 'int16'}</em><a class="headerlink" href="#ringbuffer.datatypes.types" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/modules/ringbuffer.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">rdaclient.py 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Dmytro Bielievtsov.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+  </body>
+</html>

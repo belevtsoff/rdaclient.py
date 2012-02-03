@@ -1,0 +1,542 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>rdaclient &mdash; rdaclient.py 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="rdaclient.py 0.1 documentation" href="../index.html" />
+    <link rel="up" title="Module code" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">rdaclient.py 0.1 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for rdaclient</h1><div class="highlight"><pre>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">RDA client classes. See rdaclient.Client&#39;s docstring for more information</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">from</span> <span class="nn">multiprocessing</span> <span class="kn">import</span> <span class="n">Process</span><span class="p">,</span> <span class="n">Queue</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">deque</span>
+<span class="kn">import</span> <span class="nn">signal</span>
+<span class="kn">import</span> <span class="nn">ctypes</span> <span class="kn">as</span> <span class="nn">c</span>
+<span class="kn">import</span> <span class="nn">socket</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">time</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+<span class="kn">import</span> <span class="nn">rdadefs</span>
+<span class="kn">import</span> <span class="nn">rdatools</span>
+<span class="kn">import</span> <span class="nn">ringbuffer</span>
+
+<span class="n">__author__</span> <span class="o">=</span> <span class="s">&quot;Dmytro Bielievtsov&quot;</span>
+<span class="n">__email__</span> <span class="o">=</span> <span class="s">&quot;belevtsoff@gmail.com&quot;</span>
+
+<div class="viewcode-block" id="Client"><a class="viewcode-back" href="../modules/rdaclient.html#rdaclient.Client">[docs]</a><span class="k">class</span> <span class="nc">Client</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    An asynchronous RDA (Remote Data Access) client with buffer. Spawns a</span>
+<span class="sd">    child process for storing constantly incoming data in the background.</span>
+<span class="sd">    </span>
+<span class="sd">    Currently supports only float32 data type</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    buffer_size : int, optional</span>
+<span class="sd">        buffer capacity (in samples)</span>
+<span class="sd">    buffer_window : int, optional</span>
+<span class="sd">        buffer pocket size (in samples)</span>
+<span class="sd">        </span>
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    is_streaming</span>
+<span class="sd">    buffer_size</span>
+<span class="sd">    data_dtype</span>
+<span class="sd">    buffer_window</span>
+<span class="sd">    start_msg : None or rda_msg_start_full_t</span>
+<span class="sd">        a start message obtained from the server after the first</span>
+<span class="sd">        start_streaming() call.</span>
+<span class="sd">        </span>
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    The RDA data sharing is used by the BrainVision software.</span>
+<span class="sd">    </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">buffer_size</span><span class="o">=</span><span class="mi">300000</span><span class="p">,</span> <span class="n">buffer_window</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;rdaclient&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sock</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_STREAM</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">__buf</span> <span class="o">=</span> <span class="n">ringbuffer</span><span class="o">.</span><span class="n">RingBuffer</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__buffer_size</span> <span class="o">=</span> <span class="n">buffer_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__data_dtype</span> <span class="o">=</span> <span class="s">&#39;float32&#39;</span> <span class="c"># for now</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__buffer_window</span> <span class="o">=</span> <span class="n">buffer_window</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">__streamer</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">=</span> <span class="n">Queue</span><span class="p">()</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">start_msg</span> <span class="o">=</span> <span class="bp">None</span>
+    
+    <span class="k">def</span> <span class="nf">__get_is_streaming</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__streamer</span><span class="o">.</span><span class="n">is_alive</span><span class="p">()</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">False</span>
+    <span class="n">is_streaming</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="n">__get_is_streaming</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span>
+                            <span class="s">&#39;Checks whether the Streamer is active, read-only (bool)&#39;</span><span class="p">)</span>
+    <span class="n">buffer_size</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="k">lambda</span> <span class="bp">self</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">__buffer_size</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span>
+                            <span class="s">&#39;Buffer capacity in samples, read-only (int)&#39;</span><span class="p">)</span>
+    <span class="n">data_dtype</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="k">lambda</span> <span class="bp">self</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">__data_dtype</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span>
+                            <span class="s">&#39;Buffer</span><span class="se">\&#39;</span><span class="s">s data type, read-only (string)&#39;</span><span class="p">)</span>
+    <span class="n">buffer_window</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="k">lambda</span> <span class="bp">self</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">__buffer_window</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span>
+                            <span class="s">&#39;Buffer pocket size, read-only (in samples)&#39;</span><span class="p">)</span>
+    <span class="n">last_sample</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="k">lambda</span> <span class="bp">self</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">__buf</span><span class="o">.</span><span class="n">nSamplesWritten</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span>
+                            <span class="s">&#39;Number of a last sample written to the buffer</span><span class="se">\</span>
+<span class="s">                            (= total no.)&#39;</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="Client.connect"><a class="viewcode-back" href="../modules/rdaclient.html#rdaclient.Client.connect">[docs]</a>    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">destaddr</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Connects to an RDA server</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------        </span>
+<span class="sd">        destaddr : tuple</span>
+<span class="sd">            server address</span>
+<span class="sd">        </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sock</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">destaddr</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sock</span><span class="o">.</span><span class="n">setsockopt</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">IPPROTO_TCP</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">TCP_NODELAY</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="Client.start_streaming"><a class="viewcode-back" href="../modules/rdaclient.html#rdaclient.Client.start_streaming">[docs]</a>    <span class="k">def</span> <span class="nf">start_streaming</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Starts data streaming from the server, using the following algorithm:</span>
+<span class="sd">        </span>
+<span class="sd">        1. Waits until start/data message arrives or timeout is over</span>
+<span class="sd">        2. If start message arrived, initializes buffer</span>
+<span class="sd">        3. Spawns a background process for data streaming</span>
+<span class="sd">        4. Releases</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        timeout : float, optional</span>
+<span class="sd">            time to wait for a start message (in seconds)</span>
+<span class="sd">        </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_streaming</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;already streaming&#39;</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;waiting for an rda start message...&#39;</span><span class="p">)</span>
+        
+        <span class="n">hdr</span> <span class="o">=</span> <span class="n">rdadefs</span><span class="o">.</span><span class="n">rda_msg_hdr_t</span><span class="p">()</span>
+        
+        <span class="n">then</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="k">while</span> <span class="n">now</span> <span class="o">-</span> <span class="n">then</span> <span class="o">&lt;</span> <span class="n">timeout</span><span class="p">:</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sock</span><span class="o">.</span><span class="n">recv_into</span><span class="p">(</span><span class="n">hdr</span><span class="p">)</span>
+            <span class="n">rdatools</span><span class="o">.</span><span class="n">check_received</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">hdr</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">rdatools</span><span class="o">.</span><span class="n">validate_rda_guid</span><span class="p">(</span><span class="n">hdr</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s">&#39;packet with unknown GUID reveived&#39;</span><span class="p">)</span>
+                
+            <span class="k">if</span> <span class="n">hdr</span><span class="o">.</span><span class="n">nType</span> <span class="o">==</span> <span class="n">rdadefs</span><span class="o">.</span><span class="n">RDA_START_MSG</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">start_msg</span> <span class="o">=</span> <span class="n">rdatools</span><span class="o">.</span><span class="n">rda_read_start_msg</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sock</span><span class="p">,</span> <span class="n">hdr</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;start message received, &#39;</span> <span class="o">+</span> \
+                                 <span class="n">rdatools</span><span class="o">.</span><span class="n">startmsg2string</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_msg</span><span class="p">))</span>
+                <span class="k">break</span>
+            <span class="k">elif</span> <span class="n">hdr</span><span class="o">.</span><span class="n">nType</span> <span class="o">==</span> <span class="n">rdadefs</span><span class="o">.</span><span class="n">RDA_FLOAT_MSG</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_msg</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">sock</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="n">hdr</span><span class="o">.</span><span class="n">nSize</span> <span class="o">-</span> <span class="n">c</span><span class="o">.</span><span class="n">sizeof</span><span class="p">(</span><span class="n">hdr</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;trying to resume previous session...&#39;</span><span class="p">)</span>
+                <span class="k">break</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">sock</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="n">hdr</span><span class="o">.</span><span class="n">nSize</span> <span class="o">-</span> <span class="n">c</span><span class="o">.</span><span class="n">sizeof</span><span class="p">(</span><span class="n">hdr</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;skipped package (type = </span><span class="si">%s</span><span class="s">)&#39;</span> <span class="o">%</span> <span class="n">hdr</span><span class="o">.</span><span class="n">nType</span><span class="p">)</span>
+            <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">__buf</span><span class="o">.</span><span class="n">is_initialized</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;initializing buffer...&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__buf</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_msg</span><span class="o">.</span><span class="n">nChannels</span><span class="p">),</span>
+                                  <span class="bp">self</span><span class="o">.</span><span class="n">buffer_size</span><span class="p">,</span>
+                                  <span class="bp">self</span><span class="o">.</span><span class="n">buffer_window</span><span class="p">,</span>
+                                  <span class="bp">self</span><span class="o">.</span><span class="n">data_dtype</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;spawning a streamer process...&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">__streamer</span> <span class="o">=</span> <span class="n">Streamer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sock</span><span class="o">.</span><span class="n">fileno</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">__buf</span><span class="o">.</span><span class="n">raw</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__streamer</span><span class="o">.</span><span class="n">_daemonic</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__streamer</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    </div>
+<div class="viewcode-block" id="Client.stop_streaming"><a class="viewcode-back" href="../modules/rdaclient.html#rdaclient.Client.stop_streaming">[docs]</a>    <span class="k">def</span> <span class="nf">stop_streaming</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">write_timelog</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Stops streaming by sending corresponding signal to a Streamer process</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        write_timelog : bool, optional</span>
+<span class="sd">            If True, streamer will write its timelog to a file before</span>
+<span class="sd">            stopping</span>
+<span class="sd">        </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_streaming</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;already stopped&#39;</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="s">&#39;stop&#39;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">write_timelog</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="s">&#39;save_timelog&#39;</span><span class="p">)</span>
+            
+        <span class="bp">self</span><span class="o">.</span><span class="n">__streamer</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;stopped streaming&#39;</span><span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="Client.disconnect"><a class="viewcode-back" href="../modules/rdaclient.html#rdaclient.Client.disconnect">[docs]</a>    <span class="k">def</span> <span class="nf">disconnect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Disconnects the client from a server</span>
+<span class="sd">        </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sock</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    </div>
+<div class="viewcode-block" id="Client.get_data"><a class="viewcode-back" href="../modules/rdaclient.html#rdaclient.Client.get_data">[docs]</a>    <span class="k">def</span> <span class="nf">get_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sampleStart</span><span class="p">,</span> <span class="n">sampleEnd</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Gets the data from the buffer. If possible, the data is returned in</span>
+<span class="sd">        the form of a numpy view on the corresponding chunk (without copy)</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        sampleStart : int</span>
+<span class="sd">            first sample index (included)</span>
+<span class="sd">        sampleEnd : int</span>
+<span class="sd">            last samples index (excluded)</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        data : ndarray (view or copy) or None</span>
+<span class="sd">            data chunk or None, if the data is not available</span>
+
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__buf</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="n">sampleStart</span><span class="p">,</span> <span class="n">sampleEnd</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+    </div>
+<div class="viewcode-block" id="Client.wait"><a class="viewcode-back" href="../modules/rdaclient.html#rdaclient.Client.wait">[docs]</a>    <span class="k">def</span> <span class="nf">wait</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sampleStart</span><span class="p">,</span> <span class="n">sampleEnd</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">sleep</span><span class="o">=</span><span class="mf">5e-4</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Gets the data from the buffer. Blocks if data is not available and</span>
+<span class="sd">        releases if one of the following is true:</span>
+<span class="sd">        </span>
+<span class="sd">        1. data is available</span>
+<span class="sd">        2. timeout is over</span>
+<span class="sd">        3. data is overwritten</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        sampleStart : int</span>
+<span class="sd">            first sample index (included)</span>
+<span class="sd">        sampleEnd : int</span>
+<span class="sd">            last samples index (excluded)</span>
+<span class="sd">        timeout : float, optional</span>
+<span class="sd">            timeout (seconds)</span>
+<span class="sd">        sleep : float, optional</span>
+<span class="sd">            time to wait until the next loop iteration. Used to avoid</span>
+<span class="sd">            100% processor loading.</span>
+<span class="sd">                            </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        data : ndarray (view or copy) or None</span>
+<span class="sd">            data chunk or None, if the data is overwritten or the timeout</span>
+<span class="sd">            has expired</span>
+<span class="sd">                 </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_streaming</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;nothing to wait, start streaming first&#39;</span><span class="p">)</span>
+        
+        <span class="n">then</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        
+        <span class="k">while</span> <span class="n">now</span> <span class="o">-</span> <span class="n">then</span> <span class="o">&lt;</span> <span class="n">timeout</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__buf</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="n">sampleStart</span><span class="p">,</span> <span class="n">sampleEnd</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">ringbuffer</span><span class="o">.</span><span class="n">BufferError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">code</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span> <span class="c"># if the data is overwritten</span>
+                    <span class="k">return</span> <span class="bp">None</span>
+                
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">sleep</span><span class="p">)</span>
+            <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+            
+        <span class="k">return</span> <span class="bp">None</span>
+    </div>
+<div class="viewcode-block" id="Client.poll"><a class="viewcode-back" href="../modules/rdaclient.html#rdaclient.Client.poll">[docs]</a>    <span class="k">def</span> <span class="nf">poll</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nSamples</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">sleep</span><span class="o">=</span><span class="mf">0.0005</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Gets the most resent data chunk from the buffer. Blocks until the</span>
+<span class="sd">        next data block is written to the buffer or timeout is over.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        nSamples : int</span>
+<span class="sd">            chunk size (in samples)</span>
+<span class="sd">        timeout : float</span>
+<span class="sd">            timeout (seconds)</span>
+<span class="sd">        sleep : float</span>
+<span class="sd">            time to wait until the next loop iteration. Used to avoid</span>
+<span class="sd">            100% processor loading.</span>
+<span class="sd">                         </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        data : ndarray (view or copy) or None</span>
+<span class="sd">            data chunk or None, if the data is overwritten or the timeout</span>
+<span class="sd">            has expired</span>
+<span class="sd">                 </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_streaming</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;nothing to wait, start streaming first&#39;</span><span class="p">)</span>
+        
+        <span class="n">ls</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_sample</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="n">ls</span><span class="p">,</span> <span class="n">ls</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">timeout</span><span class="p">,</span> <span class="n">sleep</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">ls</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_sample</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="n">ls</span> <span class="o">-</span> <span class="n">nSamples</span><span class="p">,</span> <span class="n">ls</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="bp">None</span>
+
+<span class="c">#------------------------------------------------------------------------------ </span>
+    </div></div>
+<div class="viewcode-block" id="Streamer"><a class="viewcode-back" href="../modules/rdaclient.html#rdaclient.Streamer">[docs]</a><span class="k">class</span> <span class="nc">Streamer</span><span class="p">(</span><span class="n">Process</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    A Streamer class. Inherited from the `multiprocessing.Process`. It is</span>
+<span class="sd">    spawned by a Client to work in the background and receive the data.</span>
+<span class="sd">    </span>
+<span class="sd">    The buffer interface is initialized with a provided raw sharedctypes</span>
+<span class="sd">    buffer array.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    q : Queue</span>
+<span class="sd">        Queue object for interprocess communication</span>
+<span class="sd">    fd : int</span>
+<span class="sd">        socket file descriptor (the one which is connected to a server)</span>
+<span class="sd">    raw : sharectypes char array:</span>
+<span class="sd">        a raw sharedctypes buffer array.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q</span><span class="p">,</span> <span class="n">fd</span><span class="p">,</span> <span class="n">raw</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;data_streamer&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sock</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">fromfd</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_STREAM</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__buf</span> <span class="o">=</span> <span class="n">ringbuffer</span><span class="o">.</span><span class="n">RingBuffer</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__buf</span><span class="o">.</span><span class="n">initialize_from_raw</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">=</span> <span class="n">q</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">timelog</span> <span class="o">=</span> <span class="n">deque</span><span class="p">(</span><span class="n">maxlen</span><span class="o">=</span><span class="mi">100000</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timelog_fname</span> <span class="o">=</span> <span class="s">&#39;streamer_timelog&#39;</span>
+        
+        <span class="c"># dictionary of known commands</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cmds</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;save_timelog&#39;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">__save_timelog</span><span class="p">}</span>
+        
+        <span class="nb">super</span><span class="p">(</span><span class="n">Streamer</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+       
+<div class="viewcode-block" id="Streamer.run"><a class="viewcode-back" href="../modules/rdaclient.html#rdaclient.Streamer.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        The main streaming loop.</span>
+<span class="sd">        </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">cmd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__get_cmd</span><span class="p">()</span>
+        <span class="n">hdr</span> <span class="o">=</span> <span class="n">rdadefs</span><span class="o">.</span><span class="n">rda_msg_hdr_t</span><span class="p">()</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;started streaming&#39;</span><span class="p">)</span>
+        
+        <span class="c"># Ignore Ctrl+C. The process is run in the daemonic mode, so if the</span>
+        <span class="c"># Client terminates, the streamer will be terminated anyway. This</span>
+        <span class="c"># ignoring however, allows for custom Ctrl+C handling in the</span>
+        <span class="c"># Client process to gracefully stop both the Client and the Streamer</span>
+        <span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGINT</span><span class="p">,</span> <span class="n">signal</span><span class="o">.</span><span class="n">SIG_IGN</span><span class="p">)</span>
+        
+        <span class="c"># stream until there&#39;s a stop command</span>
+        <span class="k">while</span> <span class="n">cmd</span> <span class="o">!=</span> <span class="s">&#39;stop&#39;</span><span class="p">:</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sock</span><span class="o">.</span><span class="n">recv_into</span><span class="p">(</span><span class="n">hdr</span><span class="p">)</span>
+            <span class="n">rdatools</span><span class="o">.</span><span class="n">check_received</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">hdr</span><span class="p">)</span>
+            
+            <span class="c"># check for a proper packet ID</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">rdatools</span><span class="o">.</span><span class="n">validate_rda_guid</span><span class="p">(</span><span class="n">hdr</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s">&#39;packet with unknown GUID reveived&#39;</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="n">hdr</span><span class="o">.</span><span class="n">nType</span> <span class="o">==</span> <span class="n">rdadefs</span><span class="o">.</span><span class="n">RDA_FLOAT_MSG</span><span class="p">:</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="n">rdatools</span><span class="o">.</span><span class="n">rda_read_data_msg</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sock</span><span class="p">,</span> <span class="n">hdr</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__buf</span><span class="o">.</span><span class="n">nChannels</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__put_datablock</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+            
+            <span class="c"># skip the weird undocumented package</span>
+            <span class="k">elif</span> <span class="n">hdr</span><span class="o">.</span><span class="n">nType</span> <span class="o">==</span> <span class="mi">10000</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">sock</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="n">hdr</span><span class="o">.</span><span class="n">nSize</span> <span class="o">-</span> <span class="n">c</span><span class="o">.</span><span class="n">sizeof</span><span class="p">(</span><span class="n">hdr</span><span class="p">))</span>
+            
+            <span class="k">elif</span> <span class="n">hdr</span><span class="o">.</span><span class="n">nType</span> <span class="o">==</span> <span class="n">rdadefs</span><span class="o">.</span><span class="n">RDA_STOP_MSG</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;stop message received, stopping...&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="s">&#39;stop&#39;</span><span class="p">)</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="o">.</span><span class="mi">5</span><span class="p">)</span>
+                
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">sock</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="n">hdr</span><span class="o">.</span><span class="n">nSize</span> <span class="o">-</span> <span class="n">c</span><span class="o">.</span><span class="n">sizeof</span><span class="p">(</span><span class="n">hdr</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;skipped package (type = </span><span class="si">%s</span><span class="s">)&#39;</span> <span class="o">%</span> <span class="n">hdr</span><span class="o">.</span><span class="n">nType</span><span class="p">)</span>
+                
+            <span class="n">cmd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__get_cmd</span><span class="p">()</span>
+                
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;stopped streaming&#39;</span><span class="p">)</span>
+        
+        <span class="c"># execute the last command before exiting</span>
+        <span class="n">cmd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__get_cmd</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__execute_cmd</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+            
+    </div>
+    <span class="k">def</span> <span class="nf">__put_datablock</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Reshapes the data chunk and pushes it to the buffer</span>
+<span class="sd">         </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------            </span>
+<span class="sd">        msg : rda_msg_data_t</span>
+<span class="sd">            data message</span>
+<span class="sd">        </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">fData</span><span class="p">,</span> <span class="s">&#39;float32&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__buf</span><span class="o">.</span><span class="n">put_data</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__buf</span><span class="o">.</span><span class="n">nChannels</span><span class="p">)))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timelog</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;put data: rda block #</span><span class="si">%s</span><span class="s">, </span><span class="si">%s</span><span class="s"> samples, time: </span><span class="si">%.3f</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">nBlock</span><span class="p">,</span>
+                                                                             <span class="n">msg</span><span class="o">.</span><span class="n">nPoints</span><span class="p">,</span>
+                                                                             <span class="bp">self</span><span class="o">.</span><span class="n">timelog</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+    
+    <span class="k">def</span> <span class="nf">__get_cmd</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Gets the command from the queue</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------        </span>
+<span class="sd">        cmd : string or None, if there was no command</span>
+<span class="sd">        </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cmd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">cmd</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+        
+    <span class="k">def</span> <span class="nf">__execute_cmd</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmd</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Executes the command, if it&#39;s known</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        cmd : string</span>
+<span class="sd">            command</span>
+<span class="sd">        </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cmds</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">cmd</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">cmds</span><span class="p">[</span><span class="n">cmd</span><span class="p">]()</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s">&#39;unable to execute command </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">cmd</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">__save_timelog</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Saves the timelog to a file. The timelog contains data package</span>
+<span class="sd">        arriving times. May be useful for debugging and network setup</span>
+<span class="sd">        </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">timelog_fname</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">timelog</span><span class="p">))</span>
+
+
+<span class="c">#------------------------------------------------------------------------------ </span>
+</div>
+<span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span> <span class="n">format</span><span class="o">=</span><span class="s">&#39;[</span><span class="si">%(process)-5d</span><span class="s">:</span><span class="si">%(threadName)-10s</span><span class="s">] </span><span class="si">%(name)s</span><span class="s">: </span><span class="si">%(levelname)s</span><span class="s">: </span><span class="si">%(message)s</span><span class="s">&#39;</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
+    <span class="n">client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span><span class="n">buffer_size</span><span class="o">=</span><span class="mi">300000</span><span class="p">,</span> <span class="n">buffer_window</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+    <span class="n">client</span><span class="o">.</span><span class="n">connect</span><span class="p">((</span><span class="s">&#39;&#39;</span><span class="p">,</span> <span class="mi">51244</span><span class="p">))</span>
+    <span class="n">client</span><span class="o">.</span><span class="n">start_streaming</span><span class="p">()</span>
+    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+    <span class="n">client</span><span class="o">.</span><span class="n">stop_streaming</span><span class="p">()</span>
+    <span class="n">client</span><span class="o">.</span><span class="n">disconnect</span><span class="p">()</span>
+    
+    
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">rdaclient.py 0.1 documentation</a> &raquo;</li>
+          <li><a href="index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Dmytro Bielievtsov.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+  </body>
+</html>

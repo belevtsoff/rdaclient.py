@@ -1,0 +1,356 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>RDA definitions (rdadefs) &mdash; rdaclient.py 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="rdaclient.py 0.1 documentation" href="../index.html" />
+    <link rel="prev" title="RDA tools (rdatools)" href="rdatools.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="rdatools.html" title="RDA tools (rdatools)"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">rdaclient.py 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-rdadefs">
+<span id="rda-definitions-rdadefs"></span><h1>RDA definitions (<a class="reference internal" href="#module-rdadefs" title="rdadefs"><tt class="xref py py-mod docutils literal"><span class="pre">rdadefs</span></tt></a>)<a class="headerlink" href="#module-rdadefs" title="Permalink to this headline">¶</a></h1>
+<p>This module contains BrainVision Remote Data Access (RDA) API definitions,
+including message structures, type constants and GUID. Refer to the 
+Chapter 12 of the BrainAmp user manual for detailed API description</p>
+<p>The module is based on the API implementation (in C) found in the
+FieldTrip package <a class="reference external" href="http://fieldtrip.fcdonders.nl">http://fieldtrip.fcdonders.nl</a> (rdadefs.h)</p>
+<dl class="class">
+<dt id="rdadefs.rda_marker_t">
+<em class="property">class </em><tt class="descclassname">rdadefs.</tt><tt class="descname">rda_marker_t</tt><a class="reference internal" href="../_modules/rdadefs.html#rda_marker_t"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rdadefs.rda_marker_t" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">_ctypes.Structure</span></tt></p>
+<p>RDA marker structure</p>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#rdadefs.rda_marker_t.full" title="rdadefs.rda_marker_t.full"><tt class="xref py py-obj docutils literal"><span class="pre">full</span></tt></a>(stringLength)</td>
+<td>Gets a complete structure including variable fields</td>
+</tr>
+</tbody>
+</table>
+<dl class="classmethod">
+<dt id="rdadefs.rda_marker_t.full">
+<em class="property">classmethod </em><tt class="descname">full</tt><big>(</big><em>stringLength</em><big>)</big><a class="reference internal" href="../_modules/rdadefs.html#rda_marker_t.full"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rdadefs.rda_marker_t.full" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets a complete structure including variable fields</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>class</strong> : rda_marker_full_t</p>
+<blockquote class="last">
+<div><p>New ctpyes structure definition</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="rdadefs.rda_marker_t.nChannel">
+<tt class="descname">nChannel</tt><a class="headerlink" href="#rdadefs.rda_marker_t.nChannel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="rdadefs.rda_marker_t.nPoints">
+<tt class="descname">nPoints</tt><a class="headerlink" href="#rdadefs.rda_marker_t.nPoints" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="rdadefs.rda_marker_t.nPosition">
+<tt class="descname">nPosition</tt><a class="headerlink" href="#rdadefs.rda_marker_t.nPosition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="rdadefs.rda_marker_t.nSize">
+<tt class="descname">nSize</tt><a class="headerlink" href="#rdadefs.rda_marker_t.nSize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="rdadefs.rda_msg_hdr_t">
+<em class="property">class </em><tt class="descclassname">rdadefs.</tt><tt class="descname">rda_msg_hdr_t</tt><a class="reference internal" href="../_modules/rdadefs.html#rda_msg_hdr_t"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rdadefs.rda_msg_hdr_t" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">_ctypes.Structure</span></tt></p>
+<p>RDA message header</p>
+<dl class="attribute">
+<dt id="rdadefs.rda_msg_hdr_t.guid">
+<tt class="descname">guid</tt><a class="headerlink" href="#rdadefs.rda_msg_hdr_t.guid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="rdadefs.rda_msg_hdr_t.nSize">
+<tt class="descname">nSize</tt><a class="headerlink" href="#rdadefs.rda_msg_hdr_t.nSize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="rdadefs.rda_msg_hdr_t.nType">
+<tt class="descname">nType</tt><a class="headerlink" href="#rdadefs.rda_msg_hdr_t.nType" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="rdadefs.rda_msg_data_t">
+<em class="property">class </em><tt class="descclassname">rdadefs.</tt><tt class="descname">rda_msg_data_t</tt><a class="reference internal" href="../_modules/rdadefs.html#rda_msg_data_t"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rdadefs.rda_msg_data_t" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">_ctypes.Structure</span></tt></p>
+<p>RDA data message</p>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#rdadefs.rda_msg_data_t.full" title="rdadefs.rda_msg_data_t.full"><tt class="xref py py-obj docutils literal"><span class="pre">full</span></tt></a>(nChannels,&nbsp;nPoints,&nbsp;markersLength)</td>
+<td>Gets a complete structure including variable fields</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#rdadefs.rda_msg_data_t.read_markers" title="rdadefs.rda_msg_data_t.read_markers"><tt class="xref py py-obj docutils literal"><span class="pre">read_markers</span></tt></a>()</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<dl class="classmethod">
+<dt id="rdadefs.rda_msg_data_t.full">
+<em class="property">classmethod </em><tt class="descname">full</tt><big>(</big><em>nChannels</em>, <em>nPoints</em>, <em>markersLength</em><big>)</big><a class="reference internal" href="../_modules/rdadefs.html#rda_msg_data_t.full"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rdadefs.rda_msg_data_t.full" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets a complete structure including variable fields</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>nChannels</strong> : int</p>
+<blockquote>
+<div><p>number of channels (from start message)</p>
+</div></blockquote>
+<p><strong>nPoints</strong> : int</p>
+<blockquote>
+<div><p>number of samples (from fixed part)</p>
+</div></blockquote>
+<p><strong>markersLength</strong> : int</p>
+<blockquote>
+<div><p>Length of the &#8216;Markers&#8217; in bytes</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>class</strong> : rda_msg_data_full_t</p>
+<blockquote class="last">
+<div><p>New ctpyes structure definition</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="rdadefs.rda_msg_data_t.hdr">
+<tt class="descname">hdr</tt><a class="headerlink" href="#rdadefs.rda_msg_data_t.hdr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="rdadefs.rda_msg_data_t.nBlock">
+<tt class="descname">nBlock</tt><a class="headerlink" href="#rdadefs.rda_msg_data_t.nBlock" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="rdadefs.rda_msg_data_t.nMarkers">
+<tt class="descname">nMarkers</tt><a class="headerlink" href="#rdadefs.rda_msg_data_t.nMarkers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="rdadefs.rda_msg_data_t.nPoints">
+<tt class="descname">nPoints</tt><a class="headerlink" href="#rdadefs.rda_msg_data_t.nPoints" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="rdadefs.rda_msg_data_t.read_markers">
+<tt class="descname">read_markers</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/rdadefs.html#rda_msg_data_t.read_markers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rdadefs.rda_msg_data_t.read_markers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="rdadefs.rda_msg_start_t">
+<em class="property">class </em><tt class="descclassname">rdadefs.</tt><tt class="descname">rda_msg_start_t</tt><a class="reference internal" href="../_modules/rdadefs.html#rda_msg_start_t"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rdadefs.rda_msg_start_t" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">_ctypes.Structure</span></tt></p>
+<p>RDA start message (sent from the server after the client has connected)</p>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#rdadefs.rda_msg_start_t.full" title="rdadefs.rda_msg_start_t.full"><tt class="xref py py-obj docutils literal"><span class="pre">full</span></tt></a>(nChannels,&nbsp;stringLength)</td>
+<td>Gets a complete structure including variable fields</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="rdadefs.rda_msg_start_t.dSamplingInterval">
+<tt class="descname">dSamplingInterval</tt><a class="headerlink" href="#rdadefs.rda_msg_start_t.dSamplingInterval" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="rdadefs.rda_msg_start_t.full">
+<em class="property">classmethod </em><tt class="descname">full</tt><big>(</big><em>nChannels</em>, <em>stringLength</em><big>)</big><a class="reference internal" href="../_modules/rdadefs.html#rda_msg_start_t.full"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rdadefs.rda_msg_start_t.full" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets a complete structure including variable fields</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>class</strong> : rda_msg_start_full_t</p>
+<blockquote class="last">
+<div><p>New ctpyes structure definition</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="rdadefs.rda_msg_start_t.hdr">
+<tt class="descname">hdr</tt><a class="headerlink" href="#rdadefs.rda_msg_start_t.hdr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="rdadefs.rda_msg_start_t.nChannels">
+<tt class="descname">nChannels</tt><a class="headerlink" href="#rdadefs.rda_msg_start_t.nChannels" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="rdadefs.rda_msg_stop_t">
+<em class="property">class </em><tt class="descclassname">rdadefs.</tt><tt class="descname">rda_msg_stop_t</tt><a class="reference internal" href="../_modules/rdadefs.html#rda_msg_stop_t"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rdadefs.rda_msg_stop_t" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">_ctypes.Structure</span></tt></p>
+<p>RDA stop message</p>
+<dl class="attribute">
+<dt id="rdadefs.rda_msg_stop_t.hdr">
+<tt class="descname">hdr</tt><a class="headerlink" href="#rdadefs.rda_msg_stop_t.hdr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Structure/Union member</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="rdatools.html"
+                        title="previous chapter">RDA tools (<tt class="docutils literal"><span class="pre">rdatools</span></tt>)</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/modules/rdadefs.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="rdatools.html" title="RDA tools (rdatools)"
+             >previous</a> |</li>
+        <li><a href="../index.html">rdaclient.py 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Dmytro Bielievtsov.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+  </body>
+</html>

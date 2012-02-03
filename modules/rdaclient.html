@@ -1,0 +1,456 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>RDA Client (rdaclient) &mdash; rdaclient.py 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="rdaclient.py 0.1 documentation" href="../index.html" />
+    <link rel="prev" title="Tutorial" href="../tutorial.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../tutorial.html" title="Tutorial"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">rdaclient.py 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="module-rdaclient">
+<span id="rda-client-rdaclient"></span><h1>RDA Client (<a class="reference internal" href="#module-rdaclient" title="rdaclient"><tt class="xref py py-mod docutils literal"><span class="pre">rdaclient</span></tt></a>)<a class="headerlink" href="#module-rdaclient" title="Permalink to this headline">¶</a></h1>
+<p>RDA client classes. See rdaclient.Client&#8217;s docstring for more information</p>
+<dl class="class">
+<dt id="rdaclient.Client">
+<em class="property">class </em><tt class="descclassname">rdaclient.</tt><tt class="descname">Client</tt><big>(</big><em>buffer_size=300000</em>, <em>buffer_window=1</em><big>)</big><a class="reference internal" href="../_modules/rdaclient.html#Client"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rdaclient.Client" title="Permalink to this definition">¶</a></dt>
+<dd><p>An asynchronous RDA (Remote Data Access) client with buffer. Spawns a
+child process for storing constantly incoming data in the background.</p>
+<p>Currently supports only float32 data type</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>buffer_size</strong> : int, optional</p>
+<blockquote>
+<div><p>buffer capacity (in samples)</p>
+</div></blockquote>
+<p><strong>buffer_window</strong> : int, optional</p>
+<blockquote class="last">
+<div><p>buffer pocket size (in samples)</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>The RDA data sharing is used by the BrainVision software.</p>
+<p class="rubric">Attributes</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#rdaclient.Client.is_streaming" title="rdaclient.Client.is_streaming"><tt class="xref py py-obj docutils literal"><span class="pre">is_streaming</span></tt></a></td>
+<td>Checks whether the Streamer is active, read-only (bool)</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#rdaclient.Client.buffer_size" title="rdaclient.Client.buffer_size"><tt class="xref py py-obj docutils literal"><span class="pre">buffer_size</span></tt></a></td>
+<td>Buffer capacity in samples, read-only (int)</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#rdaclient.Client.data_dtype" title="rdaclient.Client.data_dtype"><tt class="xref py py-obj docutils literal"><span class="pre">data_dtype</span></tt></a></td>
+<td>Buffer&#8217;s data type, read-only (string)</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#rdaclient.Client.buffer_window" title="rdaclient.Client.buffer_window"><tt class="xref py py-obj docutils literal"><span class="pre">buffer_window</span></tt></a></td>
+<td>Buffer pocket size, read-only (in samples)</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#rdaclient.Client.connect" title="rdaclient.Client.connect"><tt class="xref py py-obj docutils literal"><span class="pre">connect</span></tt></a>(destaddr)</td>
+<td>Connects to an RDA server</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#rdaclient.Client.disconnect" title="rdaclient.Client.disconnect"><tt class="xref py py-obj docutils literal"><span class="pre">disconnect</span></tt></a>()</td>
+<td>Disconnects the client from a server</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#rdaclient.Client.get_data" title="rdaclient.Client.get_data"><tt class="xref py py-obj docutils literal"><span class="pre">get_data</span></tt></a>(sampleStart,&nbsp;sampleEnd)</td>
+<td>Gets the data from the buffer.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#rdaclient.Client.poll" title="rdaclient.Client.poll"><tt class="xref py py-obj docutils literal"><span class="pre">poll</span></tt></a>(nSamples[,&nbsp;timeout,&nbsp;sleep])</td>
+<td>Gets the most resent data chunk from the buffer.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#rdaclient.Client.start_streaming" title="rdaclient.Client.start_streaming"><tt class="xref py py-obj docutils literal"><span class="pre">start_streaming</span></tt></a>([timeout])</td>
+<td>Starts data streaming from the server, using the following algorithm:  1.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#rdaclient.Client.stop_streaming" title="rdaclient.Client.stop_streaming"><tt class="xref py py-obj docutils literal"><span class="pre">stop_streaming</span></tt></a>([write_timelog])</td>
+<td>Stops streaming by sending corresponding signal to a Streamer process</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#rdaclient.Client.wait" title="rdaclient.Client.wait"><tt class="xref py py-obj docutils literal"><span class="pre">wait</span></tt></a>(sampleStart,&nbsp;sampleEnd[,&nbsp;timeout,&nbsp;sleep])</td>
+<td>Gets the data from the buffer.</td>
+</tr>
+</tbody>
+</table>
+<dl class="attribute">
+<dt id="rdaclient.Client.buffer_size">
+<tt class="descname">buffer_size</tt><a class="headerlink" href="#rdaclient.Client.buffer_size" title="Permalink to this definition">¶</a></dt>
+<dd><p>Buffer capacity in samples, read-only (int)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="rdaclient.Client.buffer_window">
+<tt class="descname">buffer_window</tt><a class="headerlink" href="#rdaclient.Client.buffer_window" title="Permalink to this definition">¶</a></dt>
+<dd><p>Buffer pocket size, read-only (in samples)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="rdaclient.Client.connect">
+<tt class="descname">connect</tt><big>(</big><em>destaddr</em><big>)</big><a class="reference internal" href="../_modules/rdaclient.html#Client.connect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rdaclient.Client.connect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Connects to an RDA server</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>destaddr</strong> : tuple</p>
+<blockquote class="last">
+<div><p>server address</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="rdaclient.Client.data_dtype">
+<tt class="descname">data_dtype</tt><a class="headerlink" href="#rdaclient.Client.data_dtype" title="Permalink to this definition">¶</a></dt>
+<dd><p>Buffer&#8217;s data type, read-only (string)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="rdaclient.Client.disconnect">
+<tt class="descname">disconnect</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/rdaclient.html#Client.disconnect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rdaclient.Client.disconnect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Disconnects the client from a server</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="rdaclient.Client.get_data">
+<tt class="descname">get_data</tt><big>(</big><em>sampleStart</em>, <em>sampleEnd</em><big>)</big><a class="reference internal" href="../_modules/rdaclient.html#Client.get_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rdaclient.Client.get_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the data from the buffer. If possible, the data is returned in
+the form of a numpy view on the corresponding chunk (without copy)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>sampleStart</strong> : int</p>
+<blockquote>
+<div><p>first sample index (included)</p>
+</div></blockquote>
+<p><strong>sampleEnd</strong> : int</p>
+<blockquote>
+<div><p>last samples index (excluded)</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>data</strong> : ndarray (view or copy) or None</p>
+<blockquote class="last">
+<div><p>data chunk or None, if the data is not available</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="rdaclient.Client.is_streaming">
+<tt class="descname">is_streaming</tt><a class="headerlink" href="#rdaclient.Client.is_streaming" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks whether the Streamer is active, read-only (bool)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="rdaclient.Client.last_sample">
+<tt class="descname">last_sample</tt><a class="headerlink" href="#rdaclient.Client.last_sample" title="Permalink to this definition">¶</a></dt>
+<dd><p>Number of a last sample written to the buffer                            (= total no.)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="rdaclient.Client.poll">
+<tt class="descname">poll</tt><big>(</big><em>nSamples</em>, <em>timeout=10</em>, <em>sleep=0.00050000000000000001</em><big>)</big><a class="reference internal" href="../_modules/rdaclient.html#Client.poll"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rdaclient.Client.poll" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the most resent data chunk from the buffer. Blocks until the
+next data block is written to the buffer or timeout is over.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>nSamples</strong> : int</p>
+<blockquote>
+<div><p>chunk size (in samples)</p>
+</div></blockquote>
+<p><strong>timeout</strong> : float</p>
+<blockquote>
+<div><p>timeout (seconds)</p>
+</div></blockquote>
+<p><strong>sleep</strong> : float</p>
+<blockquote>
+<div><p>time to wait until the next loop iteration. Used to avoid
+100% processor loading.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>data</strong> : ndarray (view or copy) or None</p>
+<blockquote class="last">
+<div><p>data chunk or None, if the data is overwritten or the timeout
+has expired</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rdaclient.Client.start_streaming">
+<tt class="descname">start_streaming</tt><big>(</big><em>timeout=10</em><big>)</big><a class="reference internal" href="../_modules/rdaclient.html#Client.start_streaming"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rdaclient.Client.start_streaming" title="Permalink to this definition">¶</a></dt>
+<dd><p>Starts data streaming from the server, using the following algorithm:</p>
+<ol class="arabic simple">
+<li>Waits until start/data message arrives or timeout is over</li>
+<li>If start message arrived, initializes buffer</li>
+<li>Spawns a background process for data streaming</li>
+<li>Releases</li>
+</ol>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>timeout</strong> : float, optional</p>
+<blockquote class="last">
+<div><p>time to wait for a start message (in seconds)</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rdaclient.Client.stop_streaming">
+<tt class="descname">stop_streaming</tt><big>(</big><em>write_timelog=False</em><big>)</big><a class="reference internal" href="../_modules/rdaclient.html#Client.stop_streaming"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rdaclient.Client.stop_streaming" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stops streaming by sending corresponding signal to a Streamer process</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>write_timelog</strong> : bool, optional</p>
+<blockquote class="last">
+<div><p>If True, streamer will write its timelog to a file before
+stopping</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="rdaclient.Client.wait">
+<tt class="descname">wait</tt><big>(</big><em>sampleStart</em>, <em>sampleEnd</em>, <em>timeout=1</em>, <em>sleep=0.00050000000000000001</em><big>)</big><a class="reference internal" href="../_modules/rdaclient.html#Client.wait"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rdaclient.Client.wait" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the data from the buffer. Blocks if data is not available and
+releases if one of the following is true:</p>
+<ol class="arabic simple">
+<li>data is available</li>
+<li>timeout is over</li>
+<li>data is overwritten</li>
+</ol>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>sampleStart</strong> : int</p>
+<blockquote>
+<div><p>first sample index (included)</p>
+</div></blockquote>
+<p><strong>sampleEnd</strong> : int</p>
+<blockquote>
+<div><p>last samples index (excluded)</p>
+</div></blockquote>
+<p><strong>timeout</strong> : float, optional</p>
+<blockquote>
+<div><p>timeout (seconds)</p>
+</div></blockquote>
+<p><strong>sleep</strong> : float, optional</p>
+<blockquote>
+<div><p>time to wait until the next loop iteration. Used to avoid
+100% processor loading.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>data</strong> : ndarray (view or copy) or None</p>
+<blockquote class="last">
+<div><p>data chunk or None, if the data is overwritten or the timeout
+has expired</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="rdaclient.Streamer">
+<em class="property">class </em><tt class="descclassname">rdaclient.</tt><tt class="descname">Streamer</tt><big>(</big><em>q</em>, <em>fd</em>, <em>raw</em><big>)</big><a class="reference internal" href="../_modules/rdaclient.html#Streamer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rdaclient.Streamer" title="Permalink to this definition">¶</a></dt>
+<dd><p>A Streamer class. Inherited from the <cite>multiprocessing.Process</cite>. It is
+spawned by a Client to work in the background and receive the data.</p>
+<p>The buffer interface is initialized with a provided raw sharedctypes
+buffer array.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>q</strong> : Queue</p>
+<blockquote>
+<div><p>Queue object for interprocess communication</p>
+</div></blockquote>
+<p><strong>fd</strong> : int</p>
+<blockquote>
+<div><p>socket file descriptor (the one which is connected to a server)</p>
+</div></blockquote>
+<p><strong>raw</strong> : sharectypes char array:</p>
+<blockquote class="last">
+<div><p>a raw sharedctypes buffer array.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">is_alive</span></tt>()</td>
+<td>Return whether process is alive</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">join</span></tt>([timeout])</td>
+<td>Wait until child process terminates</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#rdaclient.Streamer.run" title="rdaclient.Streamer.run"><tt class="xref py py-obj docutils literal"><span class="pre">run</span></tt></a>()</td>
+<td>The main streaming loop.</td>
+</tr>
+<tr class="row-even"><td><tt class="xref py py-obj docutils literal"><span class="pre">start</span></tt>()</td>
+<td>Start child process</td>
+</tr>
+<tr class="row-odd"><td><tt class="xref py py-obj docutils literal"><span class="pre">terminate</span></tt>()</td>
+<td>Terminate process; sends SIGTERM signal or uses TerminateProcess()</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="rdaclient.Streamer.run">
+<tt class="descname">run</tt><big>(</big><big>)</big><a class="reference internal" href="../_modules/rdaclient.html#Streamer.run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#rdaclient.Streamer.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>The main streaming loop.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="../tutorial.html"
+                        title="previous chapter">Tutorial</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/modules/rdaclient.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../tutorial.html" title="Tutorial"
+             >previous</a> |</li>
+        <li><a href="../index.html">rdaclient.py 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Dmytro Bielievtsov.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+  </body>
+</html>

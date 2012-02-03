@@ -1,0 +1,248 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Tutorial &mdash; rdaclient.py 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="rdaclient.py 0.1 documentation" href="index.html" />
+    <link rel="next" title="RDA Client (rdaclient)" href="modules/rdaclient.html" />
+    <link rel="prev" title="Details" href="details.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="modules/rdaclient.html" title="RDA Client (rdaclient)"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="details.html" title="Details"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">rdaclient.py 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="tutorial">
+<h1>Tutorial<a class="headerlink" href="#tutorial" title="Permalink to this headline">¶</a></h1>
+<p>In this tutorial we&#8217;ll use <tt class="docutils literal"><span class="pre">rdaclient.py</span></tt> from an interactive python shell (e.g. IPyhton) to establish a connection with an RDA server and grab/plot some data. It&#8217;ll cover only the basic functionality, so the reader it encouraged to skim through the API documentation (it&#8217;s pretty short) and check out the <a class="reference internal" href="#example-scripts">Example scripts</a>.</p>
+<div class="section" id="rda-server-setup">
+<h2>RDA Server setup<a class="headerlink" href="#rda-server-setup" title="Permalink to this headline">¶</a></h2>
+<p>First of all, we need some data-source. If you don&#8217;t have an EEG recording set-up at hand, there&#8217;s a local RDA server emulator available in the same dir: <tt class="docutils literal"><span class="pre">examples/rdasim.py</span></tt>. It will start a local TCP server and share a noisy sinusoid to any connected client. In this tutorial we&#8217;ll use following configuration:</p>
+<ul class="simple">
+<li>Sampling Frequency: 500.0 Hz</li>
+<li>Block Size: 500 samples</li>
+<li>Number of Channels: at least 1 :)</li>
+</ul>
+<p>If you&#8217;re using <tt class="docutils literal"><span class="pre">rdasim.py</span></tt>, it&#8217;ll also be good to set <cite>signal frequency</cite> = 2.0. To start the server with this configuration, type:</p>
+<div class="highlight-python"><pre>cd examples/
+./rdasim.py 500 500 2</pre>
+</div>
+<p>The server should now be up and waiting for connections. Refer to <tt class="docutils literal"><span class="pre">./rdasim.py</span> <span class="pre">-h</span></tt> for more options.</p>
+</div>
+<div class="section" id="working-with-a-client">
+<h2>Working with a client<a class="headerlink" href="#working-with-a-client" title="Permalink to this headline">¶</a></h2>
+<p>Once you&#8217;re in the interactive shell, create a client, connect to the server and start data streaming in the background:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">rdaclient</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">client</span> <span class="o">=</span> <span class="n">rdaclient</span><span class="o">.</span><span class="n">Client</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">start_streaming</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>If everything went ok, you should see something like:</p>
+<div class="highlight-python"><pre>[24218:MainThread] rdaclient: INFO: waiting for an rda start message...
+[24218:MainThread] rdaclient: INFO: start message received, 4 channels:
+1: 1.0 uV
+2: 1.0 uV
+3: 1.0 uV
+4: 1.0 uV
+
+[24218:MainThread] rdaclient: INFO: initializing buffer...
+[24218:MainThread] rdaclient: INFO: spawning a streamer process...
+[24220:MainThread] data_streamer: INFO: started streaming
+
+&gt;&gt;&gt;</pre>
+</div>
+<p>This means that the data is currently being received and written to the buffer. To see how many samples are already in the buffer, type:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">get_last_sample</span><span class="p">()</span>
+
+<span class="go">11500L</span>
+</pre></div>
+</div>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<p>You can get an arbitrary chunk of data from the buffer using <a class="reference internal" href="modules/rdaclient.html#rdaclient.Client.get_data" title="rdaclient.Client.get_data"><tt class="xref py py-meth docutils literal"><span class="pre">get_data()</span></tt></a> method:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10000</span><span class="p">)</span>   <span class="c"># gets the data chunk from sample 0 to sample 10000</span>
+
+<span class="go">array([[ 0.05664886,  0.05664886,  0.05664886,  0.05664886],</span>
+<span class="go">   [-0.00824889, -0.00824889, -0.00824889, -0.00824889],</span>
+<span class="go">   [ 0.00824752,  0.00824752,  0.00824752,  0.00824752],</span>
+<span class="go">   ...,</span>
+<span class="go">   [-0.00940873, -0.00940873, -0.00940873, -0.00940873],</span>
+<span class="go">   [-0.01339465, -0.01339465, -0.01339465, -0.01339465],</span>
+<span class="go">   [ 0.07169104,  0.07169104,  0.07169104,  0.07169104]], dtype=float32)</span>
+</pre></div>
+</div>
+<p>To get the most recent data chunk, one can use <a class="reference internal" href="modules/rdaclient.html#rdaclient.Client.poll" title="rdaclient.Client.poll"><tt class="xref py py-meth docutils literal"><span class="pre">poll()</span></tt></a>. It will block until the next buffer write (or the timeout expired) and return the specified number of samples:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">poll</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>   <span class="c"># requests 3 samples. May block for about a second with current configuration</span>
+
+<span class="go">array([[ 0.02012571,  0.02012571,  0.02012571,  0.02012571],</span>
+<span class="go">       [ 0.00282201,  0.00282201,  0.00282201,  0.00282201],</span>
+<span class="go">       [-0.06295129, -0.06295129, -0.06295129, -0.06295129]], dtype=float32)</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">If the requested samples are not yet available in the buffer, or have already been overwritten, both <a class="reference internal" href="modules/rdaclient.html#rdaclient.Client.get_data" title="rdaclient.Client.get_data"><tt class="xref py py-meth docutils literal"><span class="pre">get_data()</span></tt></a>, <a class="reference internal" href="modules/rdaclient.html#rdaclient.Client.wait" title="rdaclient.Client.wait"><tt class="xref py py-meth docutils literal"><span class="pre">wait()</span></tt></a> and <a class="reference internal" href="modules/rdaclient.html#rdaclient.Client.poll" title="rdaclient.Client.poll"><tt class="xref py py-meth docutils literal"><span class="pre">poll()</span></tt></a> will instantaneously return <tt class="docutils literal"><span class="pre">None</span></tt></p>
+</div>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<p>Let&#8217;s now plot some data:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">matplotlib.pylab</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">data</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">poll</span><span class="p">(</span><span class="mi">2000</span><span class="p">)</span>    <span class="c"># gets most recent 2000 samples</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mf">2.</span><span class="p">)</span>   <span class="c"># add some vertical offset</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="mf">4.</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">data</span><span class="p">[:,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">+</span> <span class="mf">6.</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>You should now see something like:</p>
+<div class="figure align-center">
+<img alt="_images/data.png" src="_images/data.png" />
+<p class="caption">2000 samples, 4 channels</p>
+</div>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<p>After you&#8217;re done with recording, it&#8217;s always a good practice to properly stop the streaming:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">stop_streaming</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">disconnect</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Such an output ensures that the streamer process is joined:</p>
+<div class="highlight-python"><pre>[25007:MainThread] data_streamer: INFO: stopped streaming
+[25003:MainThread] rdaclient: INFO: stopped streaming</pre>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">After the streaming is stopped, you can still use <a class="reference internal" href="modules/rdaclient.html#rdaclient.Client.get_data" title="rdaclient.Client.get_data"><tt class="xref py py-meth docutils literal"><span class="pre">get_data()</span></tt></a> to get some data from the buffer. It is also usually possible to resume streaming by calling <a class="reference internal" href="modules/rdaclient.html#rdaclient.Client.start_streaming" title="rdaclient.Client.start_streaming"><tt class="xref py py-meth docutils literal"><span class="pre">start_streaming()</span></tt></a> again.</p>
+</div>
+</div>
+<div class="section" id="example-scripts">
+<h2>Example scripts<a class="headerlink" href="#example-scripts" title="Permalink to this headline">¶</a></h2>
+<p>There are currently two example scripts available in the <tt class="docutils literal"><span class="pre">examples/</span></tt> folder:</p>
+<ul class="simple">
+<li><strong>test_raw.py</strong>: online data plotting</li>
+<li><strong>test_fft.py</strong>: simple processing and online plotting</li>
+</ul>
+<p>Both of them use <a class="reference external" href="http://www.gnuplot.info/">gnuplot</a> for plotting, because it has a pretty good refresh rate. It is included in some of the popular linux distributions (e.g. Ubuntu), so check if you already have it. The data and commands are transferred to gnuplot through STDIN. There some parameters that can be changed, so check out comments in the source code.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Tutorial</a><ul>
+<li><a class="reference internal" href="#rda-server-setup">RDA Server setup</a></li>
+<li><a class="reference internal" href="#working-with-a-client">Working with a client</a></li>
+<li><a class="reference internal" href="#example-scripts">Example scripts</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="details.html"
+                        title="previous chapter">Details</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="modules/rdaclient.html"
+                        title="next chapter">RDA Client (<tt class="docutils literal docutils literal"><span class="pre">rdaclient</span></tt>)</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/tutorial.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="modules/rdaclient.html" title="RDA Client (rdaclient)"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="details.html" title="Details"
+             >previous</a> |</li>
+        <li><a href="index.html">rdaclient.py 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Dmytro Bielievtsov.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+  </body>
+</html>

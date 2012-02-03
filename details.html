@@ -1,0 +1,264 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Details &mdash; rdaclient.py 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="rdaclient.py 0.1 documentation" href="index.html" />
+    <link rel="next" title="Tutorial" href="tutorial.html" />
+    <link rel="prev" title="Introduction" href="intro.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tutorial.html" title="Tutorial"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="intro.html" title="Introduction"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">rdaclient.py 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="details">
+<h1>Details<a class="headerlink" href="#details" title="Permalink to this headline">¶</a></h1>
+<p>This section gives an overview of the package&#8217;s internal structure and
+some implementation details.</p>
+<div class="section" id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h2>
+<p>rdaclient.py package includes 4 modules:</p>
+<ul class="simple">
+<li><a class="reference internal" href="modules/rdaclient.html#module-rdaclient" title="rdaclient"><tt class="xref py py-mod docutils literal"><span class="pre">rdaclient</span></tt></a>, a client itself (main module)</li>
+<li><a class="reference internal" href="modules/ringbuffer.html#module-ringbuffer" title="ringbuffer"><tt class="xref py py-mod docutils literal"><span class="pre">ringbuffer</span></tt></a>, a circular buffer with homogeneous elements</li>
+<li><a class="reference internal" href="modules/rdadefs.html#module-rdadefs" title="rdadefs"><tt class="xref py py-mod docutils literal"><span class="pre">rdadefs</span></tt></a>, RDA API definitions (ctypes)</li>
+<li><a class="reference internal" href="modules/rdatools.html#module-rdatools" title="rdatools"><tt class="xref py py-mod docutils literal"><span class="pre">rdatools</span></tt></a>, helper functions</li>
+</ul>
+<p>Due to its asynchronous nature, rdaclient.py can be used interactively
+in the python shell (see the <a class="reference internal" href="tutorial.html"><em>Tutorial</em></a>) in combination with other
+python libraries and processing routines. Other modules can be used
+independently. The dependency diagram is given in <strong>figure 1</strong></p>
+<div class="figure align-center">
+<img alt="_images/dep.png" src="_images/dep.png" />
+<p class="caption"><strong>Figure 1</strong>. rdaclient.py dependency diagram</p>
+</div>
+</div>
+<div class="section" id="architecture">
+<h2>Architecture<a class="headerlink" href="#architecture" title="Permalink to this headline">¶</a></h2>
+<p>Two main components of the rdaclient.py are the <cite>Client</cite> and the <cite>Buffer</cite></p>
+<div class="section" id="the-client">
+<h3>The Client<a class="headerlink" href="#the-client" title="Permalink to this headline">¶</a></h3>
+<p>The rdaclient.py basically does three things:</p>
+<ul class="simple">
+<li>receives the data from the remote RDA data source</li>
+<li>writes the data to a buffer</li>
+<li>provides an API for asynchronous data reading</li>
+</ul>
+<p>The data is being received and buffered by a separate process (<a class="reference internal" href="modules/rdaclient.html#rdaclient.Streamer" title="rdaclient.Streamer"><tt class="xref py py-class docutils literal"><span class="pre">Streamer</span></tt></a>),
+which is started and controlled by the <a class="reference internal" href="modules/rdaclient.html#rdaclient.Client" title="rdaclient.Client"><tt class="xref py py-class docutils literal"><span class="pre">Client</span></tt></a> instance in the
+main application code. Both processes access the same memory area through the
+buffer interface, provided by the <a class="reference internal" href="modules/ringbuffer.html#module-ringbuffer" title="ringbuffer"><tt class="xref py py-mod docutils literal"><span class="pre">ringbuffer</span></tt></a> module (see <a class="reference internal" href="#the-buffer">The Buffer</a> for
+implementation details). This architecture is illustrated in <strong>figure 2</strong>
+as a part of a BCI (Brain-Computer Interface) loop</p>
+<div class="figure align-center">
+<img alt="_images/arch.png" src="_images/arch.png" />
+<p class="caption"><strong>Figure 2</strong>. rdaclient.py&#8217;s architecture (Processing app)</p>
+</div>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<p>More information on the interprocess data sharing can be found in the documentation
+of the python&#8217;s <a class="reference external" href="http://docs.python.org/library/multiprocessing.html">multiprocessing</a>
+package.</p>
+</div>
+<div class="section" id="the-buffer">
+<h3>The Buffer<a class="headerlink" href="#the-buffer" title="Permalink to this headline">¶</a></h3>
+<p><a class="reference internal" href="modules/ringbuffer.html#module-ringbuffer" title="ringbuffer"><tt class="xref py py-mod docutils literal"><span class="pre">ringbuffer</span></tt></a> is an independent module which was designed to be easily
+embeddable in python applications which require a contiguous fixed-size
+ring buffer. It has several important features which make it suitable
+for the <cite>rdaclient.py</cite>.</p>
+<p><strong>Chunk reading/writing</strong></p>
+<p>One of the design goals was to minimize the number of memory copies while
+reading from the buffer. This is important, for example, when one wants to
+process the data within a sliding widow and needs to read a large chunk of
+the same data every time the window is updated.</p>
+<p>A usual solution in C will be to return a proper pointer to the processing
+routine. In python, this is achievable with the help of numpy view objects.
+The problem, however, arises when the write pointer reaches the end of the
+array (the buffer is full). Since it&#8217;s a ring buffer, the write pointer is
+set to the beginning of the array to overwrite the old data. Any data chunk
+that is more than one sample long will now be non-contiguous in memory
+(split into tail and head parts). This makes it impossible to create a
+numpy view object and the whole data chunk has to be copied before it&#8217;s
+passed to a processing routine. If the length of the data chunk is known
+(like in the case of a sliding window reading), it is possible to subdivide
+the buffer array into two parts: a working array and a pocket. The way this
+approach works around the aforementioned problem is illustrated in
+<strong>figure 3</strong>.</p>
+<div class="figure align-center">
+<img alt="_images/buffer.png" src="_images/buffer.png" />
+<p class="caption"><strong>Figure 3</strong>. Buffer writing and reading (b) with and (a) without a pocket.</p>
+</div>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<p><strong>Data and interface separation</strong></p>
+<p>The buffer consists of a buffer interface (defined by a
+<a class="reference internal" href="modules/ringbuffer.html#ringbuffer.RingBuffer" title="ringbuffer.RingBuffer"><tt class="xref py py-class docutils literal"><span class="pre">RingBuffer</span></tt></a> class) and the raw sharectypes byte
+array, which contains both data and the metadata, i.e. all the
+information about the buffer&#8217;s state.</p>
+<p>Such interface and data separation makes it possible to use the buffer
+simultaneously by several processes. The possible algorithm can be:</p>
+<ul class="simple">
+<li>A <a class="reference internal" href="modules/ringbuffer.html#ringbuffer.RingBuffer" title="ringbuffer.RingBuffer"><tt class="xref py py-class docutils literal"><span class="pre">RingBuffer</span></tt></a> object is created and initialized in one of
+the processes.</li>
+<li>newly generated raw array is shared between the child processes.</li>
+<li>those processes create their own <a class="reference internal" href="modules/ringbuffer.html#ringbuffer.RingBuffer" title="ringbuffer.RingBuffer"><tt class="xref py py-class docutils literal"><span class="pre">RingBuffer</span></tt></a> objects
+and initialize them from the raw array
+(<a class="reference internal" href="modules/ringbuffer.html#ringbuffer.RingBuffer.initialize_from_raw" title="ringbuffer.RingBuffer.initialize_from_raw"><tt class="xref py py-meth docutils literal"><span class="pre">initialize_from_raw()</span></tt></a>)provided by the parent,
+so that they all point to the same shared array.</li>
+</ul>
+<p>The raw array has the following structure:</p>
+<ol class="arabic">
+<li><p class="first">The header section:</p>
+<p>Contains the metadata such as size of the sections, current write
+pointer, datatype, number of channels (number of columns) and total
+number of samples (not bytes) written</p>
+</li>
+<li><p class="first">The buffer section:</p>
+<p>Contains the actual data in the buffer. When the write pointer reaches
+the end of the section it jumps to the beginning overwriting the old
+data. This section is further subdivided into the working and the pocket
+sections (described above).</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="section" id="further-development">
+<h2>Further development<a class="headerlink" href="#further-development" title="Permalink to this headline">¶</a></h2>
+<p>There are some basic features left unimplemented:</p>
+<ul class="simple">
+<li>marker handling</li>
+<li>support for different data types (e.g. int16 support)</li>
+</ul>
+<p>Marker handling can for example be implemented as a static method of the
+<a class="reference internal" href="modules/rdadefs.html#rdadefs.rda_msg_data_t" title="rdadefs.rda_msg_data_t"><tt class="xref py py-class docutils literal"><span class="pre">rdadefs.rda_msg_data_t</span></tt></a> class. Different data types support can be
+more demanding, since it&#8217;ll require several classes and methods to be
+re-factored.</p>
+<p>The control path between the main process and the Streamer is currently
+implemented rather as a workaround and should probably be redesigned.</p>
+<p>Finally, overall stability improvements should be considered.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Details</a><ul>
+<li><a class="reference internal" href="#overview">Overview</a></li>
+<li><a class="reference internal" href="#architecture">Architecture</a><ul>
+<li><a class="reference internal" href="#the-client">The Client</a></li>
+<li><a class="reference internal" href="#the-buffer">The Buffer</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#further-development">Further development</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="intro.html"
+                        title="previous chapter">Introduction</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="tutorial.html"
+                        title="next chapter">Tutorial</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/details.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tutorial.html" title="Tutorial"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="intro.html" title="Introduction"
+             >previous</a> |</li>
+        <li><a href="index.html">rdaclient.py 0.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Dmytro Bielievtsov.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+  </body>
+</html>

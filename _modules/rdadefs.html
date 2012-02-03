@@ -1,0 +1,289 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>rdadefs &mdash; rdaclient.py 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="rdaclient.py 0.1 documentation" href="../index.html" />
+    <link rel="up" title="Module code" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">rdaclient.py 0.1 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for rdadefs</h1><div class="highlight"><pre>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">This module contains BrainVision Remote Data Access (RDA) API definitions,</span>
+<span class="sd">including message structures, type constants and GUID. Refer to the </span>
+<span class="sd">Chapter 12 of the BrainAmp user manual for detailed API description</span>
+
+<span class="sd">The module is based on the API implementation (in C) found in the</span>
+<span class="sd">FieldTrip package http://fieldtrip.fcdonders.nl (rdadefs.h)</span>
+
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="kn">from</span> <span class="nn">ctypes</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="n">__author__</span> <span class="o">=</span> <span class="s">&quot;Dmytro Bielievtsov&quot;</span>
+<span class="n">__email__</span> <span class="o">=</span> <span class="s">&quot;belevtsoff@gmail.com&quot;</span>
+
+<span class="c">#===============================================================================</span>
+<span class="c"># Constants</span>
+<span class="c">#===============================================================================</span>
+
+<span class="n">RDA_START_MSG</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">RDA_INT_MSG</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">RDA_STOP_MSG</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">RDA_FLOAT_MSG</span> <span class="o">=</span> <span class="mi">4</span>
+
+<span class="n">RDA_GUID</span> <span class="o">=</span> <span class="p">(</span><span class="n">c_ubyte</span> <span class="o">*</span> <span class="mi">16</span><span class="p">)</span><span class="o">.</span><span class="n">from_buffer</span><span class="p">(</span><span class="n">create_string_buffer</span> \
+           <span class="p">(</span><span class="s">&#39;</span><span class="se">\x8e\x45\x58\x43\x96\xc9\x86\x4c\xaf\x4a\x98\xbb\xf6\xc9\x14\x50</span><span class="s">&#39;</span><span class="p">))</span>
+
+<span class="c">#===============================================================================</span>
+<span class="c"># Type structures</span>
+<span class="c">#===============================================================================</span>
+
+<div class="viewcode-block" id="rda_msg_hdr_t"><a class="viewcode-back" href="../modules/rdadefs.html#rdadefs.rda_msg_hdr_t">[docs]</a><span class="k">class</span> <span class="nc">rda_msg_hdr_t</span><span class="p">(</span><span class="n">Structure</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    RDA message header</span>
+<span class="sd">    </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">_pack_</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">_fields_</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="p">(</span><span class="s">&#39;guid&#39;</span><span class="p">,</span> <span class="n">c_ubyte</span> <span class="o">*</span> <span class="mi">16</span><span class="p">),</span>
+                <span class="p">(</span><span class="s">&#39;nSize&#39;</span><span class="p">,</span> <span class="n">c_ulong</span><span class="p">),</span>
+                <span class="p">(</span><span class="s">&#39;nType&#39;</span><span class="p">,</span> <span class="n">c_ulong</span><span class="p">),</span>
+               <span class="p">]</span>
+    
+</div>
+<div class="viewcode-block" id="rda_msg_stop_t"><a class="viewcode-back" href="../modules/rdadefs.html#rdadefs.rda_msg_stop_t">[docs]</a><span class="k">class</span> <span class="nc">rda_msg_stop_t</span><span class="p">(</span><span class="n">Structure</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    RDA stop message</span>
+<span class="sd">    </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">_pack_</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">_fields_</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="p">(</span><span class="s">&#39;hdr&#39;</span><span class="p">,</span> <span class="n">rda_msg_hdr_t</span><span class="p">)</span>
+               <span class="p">]</span>
+    </div>
+<div class="viewcode-block" id="rda_msg_data_t"><a class="viewcode-back" href="../modules/rdadefs.html#rdadefs.rda_msg_data_t">[docs]</a><span class="k">class</span> <span class="nc">rda_msg_data_t</span><span class="p">(</span><span class="n">Structure</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    RDA data message</span>
+<span class="sd">    </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">_pack_</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">_fields_</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="p">(</span><span class="s">&#39;hdr&#39;</span><span class="p">,</span> <span class="n">rda_msg_hdr_t</span><span class="p">),</span>
+                <span class="p">(</span><span class="s">&#39;nBlock&#39;</span><span class="p">,</span> <span class="n">c_ulong</span><span class="p">),</span>
+                <span class="p">(</span><span class="s">&#39;nPoints&#39;</span><span class="p">,</span> <span class="n">c_ulong</span><span class="p">),</span>
+                <span class="p">(</span><span class="s">&#39;nMarkers&#39;</span><span class="p">,</span> <span class="n">c_ulong</span><span class="p">),</span>
+               <span class="p">]</span>
+    
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="rda_msg_data_t.full"><a class="viewcode-back" href="../modules/rdadefs.html#rdadefs.rda_msg_data_t.full">[docs]</a>    <span class="k">def</span> <span class="nf">full</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">nChannels</span><span class="p">,</span> <span class="n">nPoints</span><span class="p">,</span> <span class="n">markersLength</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Gets a complete structure including variable fields</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        nChannels : int</span>
+<span class="sd">            number of channels (from start message)</span>
+<span class="sd">        nPoints : int</span>
+<span class="sd">            number of samples (from fixed part)</span>
+<span class="sd">        markersLength : int</span>
+<span class="sd">            Length of the &#39;Markers&#39; in bytes</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        class : rda_msg_data_full_t</span>
+<span class="sd">            New ctpyes structure definition</span>
+<span class="sd">            </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">class</span> <span class="nc">rda_msg_data_full_t</span><span class="p">(</span><span class="n">Structure</span><span class="p">):</span>
+            <span class="n">_pack_</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">_fields_</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">cls</span><span class="o">.</span><span class="n">_fields_</span><span class="p">)</span> <span class="c"># copy</span>
+            <span class="n">_fields_</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span>
+                             <span class="p">(</span><span class="s">&#39;fData&#39;</span><span class="p">,</span> <span class="n">c_float</span> <span class="o">*</span> <span class="p">(</span><span class="n">nChannels</span> <span class="o">*</span> <span class="n">nPoints</span><span class="p">)),</span>
+                             <span class="p">(</span><span class="s">&#39;Markers&#39;</span><span class="p">,</span> <span class="n">c_ubyte</span> <span class="o">*</span> <span class="n">markersLength</span><span class="p">)</span>
+                             <span class="p">])</span>
+            
+            <span class="n">varLength</span> <span class="o">=</span> <span class="n">sizeof</span><span class="p">(</span><span class="n">c_float</span><span class="p">)</span> <span class="o">*</span> <span class="n">nChannels</span> <span class="o">*</span> <span class="n">nPoints</span> <span class="o">+</span> \
+                        <span class="n">sizeof</span><span class="p">(</span><span class="n">c_ubyte</span><span class="p">)</span> <span class="o">*</span> <span class="n">markersLength</span>
+            
+        <span class="k">return</span> <span class="n">rda_msg_data_full_t</span>
+    </div>
+<div class="viewcode-block" id="rda_msg_data_t.read_markers"><a class="viewcode-back" href="../modules/rdadefs.html#rdadefs.rda_msg_data_t.read_markers">[docs]</a>    <span class="k">def</span> <span class="nf">read_markers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span>
+    
+    </div></div>
+<div class="viewcode-block" id="rda_msg_start_t"><a class="viewcode-back" href="../modules/rdadefs.html#rdadefs.rda_msg_start_t">[docs]</a><span class="k">class</span> <span class="nc">rda_msg_start_t</span><span class="p">(</span><span class="n">Structure</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    RDA start message (sent from the server after the client has connected)</span>
+<span class="sd">    </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">_pack_</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">_fields_</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="p">(</span><span class="s">&#39;hdr&#39;</span><span class="p">,</span> <span class="n">rda_msg_hdr_t</span><span class="p">),</span>
+                <span class="p">(</span><span class="s">&#39;nChannels&#39;</span><span class="p">,</span> <span class="n">c_ulong</span><span class="p">),</span>
+                <span class="p">(</span><span class="s">&#39;dSamplingInterval&#39;</span><span class="p">,</span> <span class="n">c_double</span><span class="p">),</span>
+               <span class="p">]</span>
+    
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="rda_msg_start_t.full"><a class="viewcode-back" href="../modules/rdadefs.html#rdadefs.rda_msg_start_t.full">[docs]</a>    <span class="k">def</span> <span class="nf">full</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">nChannels</span><span class="p">,</span> <span class="n">stringLength</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Gets a complete structure including variable fields</span>
+<span class="sd">        </span>
+<span class="sd">        Papameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        nChannels : int</span>
+<span class="sd">            number of channels (from start message)</span>
+<span class="sd">        stringLength : int</span>
+<span class="sd">            the length of the sChannelNames field in bytes</span>
+<span class="sd">                </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        class : rda_msg_start_full_t</span>
+<span class="sd">            New ctpyes structure definition</span>
+<span class="sd">        </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">class</span> <span class="nc">rda_msg_start_full_t</span><span class="p">(</span><span class="n">Structure</span><span class="p">):</span>
+            <span class="n">_pack_</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">_fields_</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">cls</span><span class="o">.</span><span class="n">_fields_</span><span class="p">)</span> <span class="c"># copy</span>
+            <span class="n">_fields_</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span>
+                             <span class="p">(</span><span class="s">&#39;dResolutions&#39;</span><span class="p">,</span> <span class="n">c_double</span> <span class="o">*</span> <span class="n">nChannels</span><span class="p">),</span>
+                             <span class="p">(</span><span class="s">&#39;sChannelNames&#39;</span><span class="p">,</span> <span class="n">c_ubyte</span> <span class="o">*</span> <span class="n">stringLength</span><span class="p">)</span>
+                             <span class="p">])</span>
+            
+            <span class="n">varLength</span> <span class="o">=</span> <span class="n">sizeof</span><span class="p">(</span><span class="n">c_double</span><span class="p">)</span> <span class="o">*</span> <span class="n">nChannels</span> <span class="o">+</span> \
+                        <span class="n">sizeof</span><span class="p">(</span><span class="n">c_ubyte</span><span class="p">)</span> <span class="o">*</span> <span class="n">stringLength</span>
+                        
+        <span class="k">return</span> <span class="n">rda_msg_start_full_t</span>
+    
+</div></div>
+<div class="viewcode-block" id="rda_marker_t"><a class="viewcode-back" href="../modules/rdadefs.html#rdadefs.rda_marker_t">[docs]</a><span class="k">class</span> <span class="nc">rda_marker_t</span><span class="p">(</span><span class="n">Structure</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    RDA marker structure</span>
+<span class="sd">    </span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">_pack_</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">_fields_</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="p">(</span><span class="s">&#39;nSize&#39;</span><span class="p">,</span> <span class="n">c_ulong</span><span class="p">),</span>
+                <span class="p">(</span><span class="s">&#39;nPosition&#39;</span><span class="p">,</span> <span class="n">c_ulong</span><span class="p">),</span>
+                <span class="p">(</span><span class="s">&#39;nPoints&#39;</span><span class="p">,</span> <span class="n">c_ulong</span><span class="p">),</span>
+                <span class="p">(</span><span class="s">&#39;nChannel&#39;</span><span class="p">,</span> <span class="n">c_int</span><span class="p">),</span>
+               <span class="p">]</span>
+    
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="rda_marker_t.full"><a class="viewcode-back" href="../modules/rdadefs.html#rdadefs.rda_marker_t.full">[docs]</a>    <span class="k">def</span> <span class="nf">full</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">stringLength</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Gets a complete structure including variable fields</span>
+<span class="sd">        </span>
+<span class="sd">        Papameters</span>
+<span class="sd">        ----------    </span>
+<span class="sd">        stringLength : int</span>
+<span class="sd">            the length of the sTypeDesc field in bytes</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        class : rda_marker_full_t</span>
+<span class="sd">            New ctpyes structure definition</span>
+<span class="sd">            </span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">class</span> <span class="nc">rda_marker_full_t</span><span class="p">(</span><span class="n">Structure</span><span class="p">):</span>
+            <span class="n">_pack_</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">_fields_</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">cls</span><span class="o">.</span><span class="n">_fields_</span><span class="p">)</span> <span class="c"># copy</span>
+            <span class="n">_fields_</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span>
+                             <span class="p">(</span><span class="s">&#39;sTypeDesc&#39;</span><span class="p">,</span> <span class="n">c_ubyte</span> <span class="o">*</span> <span class="n">stringLength</span><span class="p">)</span>
+                             <span class="p">])</span>
+            
+            <span class="n">varLength</span> <span class="o">=</span> <span class="n">sizeof</span><span class="p">(</span><span class="n">c_ubyte</span><span class="p">)</span> <span class="o">*</span> <span class="n">stringLength</span>
+            
+        <span class="k">return</span> <span class="n">rda_marker_full_t</span>
+</div></div>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;rda_marker_t&#39;</span><span class="p">,</span> <span class="s">&#39;rda_msg_hdr_t&#39;</span><span class="p">,</span> <span class="s">&#39;rda_msg_data_t&#39;</span><span class="p">,</span>
+           <span class="s">&#39;rda_msg_start_t&#39;</span><span class="p">,</span> <span class="s">&#39;rda_msg_stop_t&#39;</span><span class="p">]</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../np-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">rdaclient.py 0.1 documentation</a> &raquo;</li>
+          <li><a href="index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Dmytro Bielievtsov.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+  </body>
+</html>
