@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -61,7 +62,7 @@
 <div class="section" id="what-is-rdaclient-py">
 <h2>What is rdaclient.py?<a class="headerlink" href="#what-is-rdaclient-py" title="Permalink to this headline">¶</a></h2>
 <p>Rdaclient.py is an asynchronous RDA client with buffer, written in pure python (with extensive usage of ctypes). Remote Data Access protocol is used by the the BrainVision recording software to share EEG the data over the network.</p>
-<p>For BrainAmp (by Brain Products) users, the module is aimed to simplify the development of processing applications (including BCIs) by encapsulating an asynchronous network client and a circular buffer in a single module. For more information, refer to <a class="reference internal" href="details.html"><em>Details</em></a>.</p>
+<p>For BrainAmp (by Brain Products) users, the module is aimed to simplify the development of processing applications (including BCIs) by encapsulating an asynchronous network client and a circular buffer in a single module. It thus should be handy to use it in a BCI (Brain-Computer Interface). For more information, refer to <a class="reference internal" href="details.html"><em>Details</em></a>.</p>
 </div>
 <div class="section" id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
@@ -80,7 +81,7 @@
 git clone git://github.com/belevtsoff/rdaclient.py.git
 cd rdaclient.py/</pre>
 </div>
-<p>You can also browse the code here: <a class="reference external" href="http://github.com/belevtsoff/rdaclient.py">http://github.com/belevtsoff/rdaclient.py</a></p>
+<p>You can also fork the project on the guthub: <a class="reference external" href="http://github.com/belevtsoff/rdaclient.py">http://github.com/belevtsoff/rdaclient.py</a></p>
 <p>This is basically it. In order to make modules importable from other locations, just add the source folder to your PYTHONPATH, e.g.:</p>
 <div class="highlight-python"><pre>echo export PYTHONPATH=\$PYTHONPATH:/path/to/rdaclient.py/src/ &gt;&gt; ~/.bashrc</pre>
 </div>

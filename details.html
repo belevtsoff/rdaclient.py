@@ -170,6 +170,87 @@ sections (described above).</p>
 </ol>
 </div>
 </div>
+<div class="section" id="latency">
+<h2>Latency<a class="headerlink" href="#latency" title="Permalink to this headline">¶</a></h2>
+<p>As it was mentioned in previous sections, the <cite>rdaclient.py</cite> can be used
+in BCIs. Therefore, it&#8217;s very important to have an idea about the latencies
+appearing when transferring the data along the path
+<tt class="docutils literal"><span class="pre">Amplifier</span> <span class="pre">-&gt;</span> <span class="pre">Recording</span> <span class="pre">Machine</span> <span class="pre">-&gt;</span> <span class="pre">Processing</span> <span class="pre">machine</span></tt>.</p>
+<div class="section" id="set-up">
+<h3>Set up<a class="headerlink" href="#set-up" title="Permalink to this headline">¶</a></h3>
+<p>Unfortunately, it&#8217;s pretty hard to measure exactly the
+<tt class="docutils literal"><span class="pre">Amp</span> <span class="pre">-&gt;</span> <span class="pre">...</span> <span class="pre">-&gt;</span> <span class="pre">Client</span></tt> latencies. Alternatively, one can assemble a
+closed BCI-like loop and measure the turnover time as the upper bound of
+the aforementioned latency. The results below are obtained using the
+system shown in <strong>figure 4</strong>. A simple algorithm was used to produce
+a &#8220;spike train&#8221; which was then recorded and analysed:</p>
+<ol class="arabic simple">
+<li>generate a spike-like signal and send it to the EEG Cap through the audio system</li>
+<li>listen for the incoming data (from the Amplifier)</li>
+<li>once the spike is detected, go to 1.</li>
+</ol>
+<div class="figure align-center">
+<img alt="_images/bci.png" src="_images/bci.png" />
+<p class="caption"><strong>Figure 4</strong>. A simple BCI-like loop, used for measuring latencies</p>
+</div>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<p>The recording machine&#8217;s configuration:</p>
+<ul class="simple">
+<li>Sampling frequency: 500 Hz</li>
+<li>Block size: 10 samples</li>
+<li>Number of channels: 64</li>
+<li>Theoretical inter-block interval: <strong>20 ms</strong>.</li>
+</ul>
+<p>The <a class="reference external" href="http://bbci.de/pyff/index.html">Pyff</a> framework was used for
+generating the feedback signal and sending it to the audio system
+through the python interface
+(<a class="reference external" href="http://sourceforge.net/projects/py-jack/">pyjack</a>) to the low-latency
+audio library (<a class="reference external" href="http://jackaudio.org/">JACK</a>). To minimize the latency
+introduced by the audio buffer, JACK was configured as follows:</p>
+<ul class="simple">
+<li>frames per period: 16</li>
+<li>periods per buffer: 2</li>
+<li>sampling rate: 96000</li>
+</ul>
+<p>This, in combination with a real-time system kernel, allowed for a
+theoretical audio latency of 0.333 ms.</p>
+</div>
+<div class="section" id="results">
+<h3>Results<a class="headerlink" href="#results" title="Permalink to this headline">¶</a></h3>
+<p>The time intervals between the data-block arrivals at the client-side
+often exceed the theoretical value of 20 ms more than twice (<strong>figure 5</strong>).
+Moreover, their distribution has a number of sharp peaks, none of which
+corresponds to the 20 ms value. Such peaky distribution is most probably
+caused by a server, since disabling the Nagle&#8217;s algorithm (TCP overhead
+minimization) had no effect.</p>
+<div class="figure align-center">
+<img alt="_images/data_ivals.png" src="_images/data_ivals.png" />
+<p class="caption"><strong>Figure 5</strong>. Inter-block intervals at the receiving side</p>
+</div>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<p>Because the complete loop contains several additional latency sources, the
+average turnover time was considerably larger (~80 ms) than the average inter-block
+interval of about 20 ms (<strong>figure 6</strong>). The potential latency sources are:</p>
+<ul class="simple">
+<li>the inter-process communication between the Client and the Feedback Controller</li>
+<li>python interface to JACK</li>
+<li>audio buffer latency (unlikely)</li>
+<li>capacitive effects of the computer-cap connection elements (soldering blobs,
+clamps, etc.)</li>
+</ul>
+<div class="figure align-center">
+<img alt="_images/isi.png" src="_images/isi.png" />
+<p class="caption"><strong>Figure 6</strong>. The <tt class="docutils literal"><span class="pre">Generation</span> <span class="pre">-&gt;</span> <span class="pre">Recording</span> <span class="pre">-&gt;</span> <span class="pre">Detection</span> <span class="pre">-&gt;</span> <span class="pre">Generation</span></tt> loop times</p>
+</div>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+</div>
+</div>
 <div class="section" id="further-development">
 <h2>Further development<a class="headerlink" href="#further-development" title="Permalink to this headline">¶</a></h2>
 <p>There are some basic features left unimplemented:</p>
@@ -177,7 +258,7 @@ sections (described above).</p>
 <li>marker handling</li>
 <li>support for different data types (e.g. int16 support)</li>
 </ul>
-<p>Marker handling can for example be implemented as a static method of the
+<p>Marker handling can, for example, be implemented as a static method of the
 <a class="reference internal" href="modules/rdadefs.html#rdadefs.rda_msg_data_t" title="rdadefs.rda_msg_data_t"><tt class="xref py py-class docutils literal"><span class="pre">rdadefs.rda_msg_data_t</span></tt></a> class. Different data types support can be
 more demanding, since it&#8217;ll require several classes and methods to be
 re-factored.</p>
@@ -200,6 +281,11 @@ implemented rather as a workaround and should probably be redesigned.</p>
 <li><a class="reference internal" href="#architecture">Architecture</a><ul>
 <li><a class="reference internal" href="#the-client">The Client</a></li>
 <li><a class="reference internal" href="#the-buffer">The Buffer</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#latency">Latency</a><ul>
+<li><a class="reference internal" href="#set-up">Set up</a></li>
+<li><a class="reference internal" href="#results">Results</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#further-development">Further development</a></li>
