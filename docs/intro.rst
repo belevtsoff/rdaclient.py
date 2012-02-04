@@ -5,7 +5,7 @@ What is rdaclient.py?
 ---------------------
 Rdaclient.py is an asynchronous RDA client with buffer, written in pure python (with extensive usage of ctypes). Remote Data Access protocol is used by the the BrainVision recording software to share EEG the data over the network.
 
-For BrainAmp (by Brain Products) users, the module is aimed to simplify the development of processing applications (including BCIs) by encapsulating an asynchronous network client and a circular buffer in a single module. For more information, refer to :doc:`details`.
+For BrainAmp (by Brain Products) users, the module is aimed to simplify the development of processing applications (including BCIs) by encapsulating an asynchronous network client and a circular buffer in a single module. It thus should be handy to use it in a BCI (Brain-Computer Interface). For more information, refer to :doc:`details`.
 
 
 Installation
@@ -26,6 +26,8 @@ Next, get the source from the github::
     cd /where/you/want/it/to/be
     git clone git://github.com/belevtsoff/rdaclient.py.git
     cd rdaclient.py/
+    
+You can also fork the project on the guthub: http://github.com/belevtsoff/rdaclient.py
     
 This is basically it. In order to make modules importable from other locations, just add the source folder to your PYTHONPATH, e.g.::
 
