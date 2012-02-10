@@ -38,3 +38,8 @@ locations, just add the source folder to your PYTHONPATH, e.g.::
 
 substituting /path/to/rdaclient.py/ with the actual absolute path to
 rdaclient.py/
+
+Documentation
+-------------
+
+Can be found here: http://belevtsoff.github.com/rdaclient.py/
