@@ -1,0 +1,8 @@
+*.swp
+*.swo
+*.pyc
+docs/build/
+build/
+/dist
+/src/SpikeSort.egg-info/**/*
+/src/SpikeSort.egg-info
