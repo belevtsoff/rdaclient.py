@@ -36,8 +36,8 @@ class rda_msg_hdr_t(Structure):
     _pack_ = 1
     _fields_ = [
                 ('guid', c_ubyte * 16),
-                ('nSize', c_ulong),
-                ('nType', c_ulong),
+                ('nSize', c_uint32),
+                ('nType', c_uint32),
                ]
     
 
@@ -59,9 +59,9 @@ class rda_msg_data_t(Structure):
     _pack_ = 1
     _fields_ = [
                 ('hdr', rda_msg_hdr_t),
-                ('nBlock', c_ulong),
-                ('nPoints', c_ulong),
-                ('nMarkers', c_ulong),
+                ('nBlock', c_uint32),
+                ('nPoints', c_uint32),
+                ('nMarkers', c_uint32),
                ]
     
     @classmethod
@@ -109,7 +109,7 @@ class rda_msg_start_t(Structure):
     _pack_ = 1
     _fields_ = [
                 ('hdr', rda_msg_hdr_t),
-                ('nChannels', c_ulong),
+                ('nChannels', c_uint32),
                 ('dSamplingInterval', c_double),
                ]
     
@@ -152,9 +152,9 @@ class rda_marker_t(Structure):
     '''
     _pack_ = 1
     _fields_ = [
-                ('nSize', c_ulong),
-                ('nPosition', c_ulong),
-                ('nPoints', c_ulong),
+                ('nSize', c_uint32),
+                ('nPosition', c_uint32),
+                ('nPoints', c_uint32),
                 ('nChannel', c_int),
                ]
     
