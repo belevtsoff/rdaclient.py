@@ -63,7 +63,7 @@ def create_start_msg(nChannels, sampling_freq):
     start_msg.hdr.nSize = c.sizeof(start_msg)
     start_msg.hdr.nType = defs.RDA_START_MSG
     start_msg.nChannels = nChannels
-    start_msg.dSamplingInterval = 1. / sampling_freq
+    start_msg.dSamplingInterval = 1e6 / sampling_freq # microseconds
     start_msg.dResolutions = dResolutions
     start_msg.sChannelNames = sChannelNames
     

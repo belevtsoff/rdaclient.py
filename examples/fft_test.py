@@ -43,7 +43,7 @@ client.connect(address)
 client.start_streaming()
 
 # get sampling frequency
-sample_interval = client.start_msg.dSamplingInterval
+sample_interval = client.start_msg.dSamplingInterval/1e6 # seconds
 sampling_freq = 1.0 / sample_interval
 
 # calculate bands
