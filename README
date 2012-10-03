@@ -17,7 +17,7 @@ Installation
 
 Before installing, make sure you have the following:
 
-* python 2.6
+* python 2.x
 * numpy 1.4.1 or higher
 
 Optionally, for the tutorial/examples, you'll need:
